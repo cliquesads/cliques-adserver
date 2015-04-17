@@ -1,0 +1,7 @@
+{
+  "name": "Cliques AdServer",
+  "description": "AdServer for Cliques",
+  "repository": "https://github.com/cliques-adserver.git",
+  "logo": "",
+  "keywords": ["node", "express", "static"]
+}
