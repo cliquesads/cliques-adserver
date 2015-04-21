@@ -144,8 +144,9 @@ app.get('/crg', function(request, response){
     // make the db call to get creative group details
     advertiser_models.getNestedObjectById(request.query.crg_id, 'CreativeGroup', function(err, obj){
         var creative = obj.getWeightedRandomCreative();
+        var click_url = util.format('%s?id=%s&redir=%s', BASE_CLICK_URL, creative._id, encodeURIComponent(creative.click_url));
         var html = img_creative_iframe({
-            click_url: util.format('%s?id=%s&redir=%s', BASE_CLICK_URL, creative._id, creative.click_url),
+            click_url: click_url,
             img_url: creative.url,
             width: creative.w,
             height: creative.h
