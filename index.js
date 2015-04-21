@@ -1,19 +1,17 @@
 //first-party packages
-var br = require('./lib/bid_requests');
 var node_utils = require('cliques_node_utils');
 var cliques_cookies = node_utils.cookies;
-var logging = require('./lib/exchange_logging');
+var logging = require('./lib/adserver_logging');
 var db = node_utils.mongodb;
 var bigQueryUtils = node_utils.google.bigQueryUtils;
 var googleAuth = node_utils.google.auth;
 
 //third-party packages
 //have to require PMX before express to enable monitoring
-var pmx = require('pmx').init();
 var express = require('express');
 var app = express();
-var querystring = require('querystring');
 var jade = require('jade');
+var querystring = require('querystring');
 var requestIp = require('request-ip');
 var winston = require('winston');
 var path = require('path');
@@ -21,7 +19,6 @@ var util = require('util');
 var cookieParser = require('cookie-parser');
 var responseTime = require('response-time');
 var config = require('config');
-var exitHook = require('exit-hook');
 
 /* -------------------  NOTES ------------------- */
 
@@ -32,15 +29,15 @@ var exitHook = require('exit-hook');
 var logfile = path.join(
     process.env['HOME'],
     'logs',
-    util.format('adexchange_%s.log',node_utils.dates.isoFormatUTCNow())
+    util.format('adserver_%s.log',node_utils.dates.isoFormatUTCNow())
 );
 
-var devNullLogger = logger = new logging.ExchangeCLogger({transports: []});
+var devNullLogger = logger = new logging.AdServerCLogger({transports: []});
 if (process.env.NODE_ENV != 'test'){
     var bq_config = bigQueryUtils.loadFullBigQueryConfig('./bq_config.json');
     var eventStreamer = new bigQueryUtils.BigQueryEventStreamer(bq_config,
         googleAuth.DEFAULT_JWT_SECRETS_FILE,20);
-    logger = new logging.ExchangeCLogger({
+    logger = new logging.AdServerCLogger({
         transports: [
             new (winston.transports.Console)({timestamp:true}),
             new (winston.transports.File)({filename:logfile,timestamp:true}),
@@ -56,32 +53,34 @@ if (process.env.NODE_ENV != 'test'){
 
 // Build the connection string
 var exchangeMongoURI = util.format('mongodb://%s:%s/%s',
-    config.get('Exchange.mongodb.exchange.secondary.host'),
-    config.get('Exchange.mongodb.exchange.secondary.port'),
-    config.get('Exchange.mongodb.exchange.db'));
+    config.get('AdServer.mongodb.exchange.secondary.host'),
+    config.get('AdServer.mongodb.exchange.secondary.port'),
+    config.get('AdServer.mongodb.exchange.db'));
 
 var exchangeMongoOptions = {
-    user: config.get('Exchange.mongodb.exchange.user'),
-    pass: config.get('Exchange.mongodb.exchange.pwd'),
-    auth: {authenticationDatabase: config.get('Exchange.mongodb.exchange.db')}
+    user: config.get('AdServer.mongodb.exchange.user'),
+    pass: config.get('AdServer.mongodb.exchange.pwd'),
+    auth: {authenticationDatabase: config.get('AdServer.mongodb.exchange.db')}
 };
 var EXCHANGE_CONNECTION = db.createConnectionWrapper(exchangeMongoURI, exchangeMongoOptions, function(err, logstring){
     if (err) throw err;
     logger.info(logstring);
 });
 
+var advertiser_models = db.models.AdvertiserModels(EXCHANGE_CONNECTION);
+
 /* ------------------- MONGODB - USER DB ------------------- */
 
 // Build the connection string
 var userMongoURI = util.format('mongodb://%s:%s/%s',
-    config.get('Exchange.mongodb.user.primary.host'),
-    config.get('Exchange.mongodb.user.primary.port'),
-    config.get('Exchange.mongodb.user.db'));
+    config.get('AdServer.mongodb.user.primary.host'),
+    config.get('AdServer.mongodb.user.primary.port'),
+    config.get('AdServer.mongodb.user.db'));
 
 var userMongoOptions = {
-    user: config.get('Exchange.mongodb.user.user'),
-    pass: config.get('Exchange.mongodb.user.pwd'),
-    auth: {authenticationDatabase: config.get('Exchange.mongodb.user.db')}
+    user: config.get('AdServer.mongodb.user.user'),
+    pass: config.get('AdServer.mongodb.user.pwd'),
+    auth: {authenticationDatabase: config.get('AdServer.mongodb.user.db')}
 };
 var USER_CONNECTION = db.createConnectionWrapper(userMongoURI, userMongoOptions, function(err, logstring){
     if (err) throw err;
@@ -97,7 +96,7 @@ app.use(function(req, res, next) {
 });
 app.use(cookieParser());
 app.use(responseTime());
-app.set('port', (process.env['EXCHANGE-WEBSERVER-PORT'] || config.get('Exchange.http.port') || 5000));
+app.set('port', (config.get('AdServer.http.port') || 5000));
 app.use(express.static(__dirname + '/public'));
 
 // custom cookie-parsing middleware
@@ -111,76 +110,59 @@ app.use(function(req, res, next){
     logger.httpRequestMiddleware(req, res, next);
 });
 
-/* --------------------- AUCTIONEER -----------------------*/
 
-var bidder_timeout = config.get('Exchange.bidder_timeout');
-var bidders = config.get('Exchange.bidders');
-var auctioneer = new br.Auctioneer(bidders,bidder_timeout,EXCHANGE_CONNECTION,logger);
+/*  ------------------- Jade Templates ------------------- */
+
+var img_creative_iframe  = jade.compileFile('./templates/img_creative_iframe.jade', null);
 
 /*  ------------------- HTTP Endpoints  ------------------- */
 
-var server = app.listen(app.get('port'), function(){
-    logger.info("Cliques Ad Exchange is running at localhost:" + app.get('port'));
+app.listen(app.get('port'), function(){
+    logger.info("Cliques AdServer is running at localhost:" + app.get('port'));
 });
 
 app.get('/', function(request, response) {
-    response.send('Welcome to the Cliques Ad Exchange');
+    response.send('nothing to see here');
 });
 
-function default_condition(response){
-    // TODO: make a DB call here to get default
-    return response.json({"adm": config.get('Exchange.defaultcondition.300x250'), "default": true}).status(200);
-}
-
+var CLICK_PATH = 'clk';
+var BASE_CLICK_URL = util.format('%s:%s/%s',config.get('Adserver.http.host'),config.get('Adserver.http.host'),CLICK_PATH);
 /**
- * Main endpoint to handle incoming impression requests & respond with winning ad markup.
- * Does the following, in order:
- * 1) Logs incoming request
- * 2) Retrieves bids via HTTP POST requests using OpenRTB 2.3 bid request object
- * 3) Runs 2nd-price Vickrey auction based on bid-responses
- * 4) Returns winning ad markup in HTTP JSON response
- * 5) Logs response w/ winning bid metadata
- * 6) Sends win-notice via HTTP GET to winning bidder
-*/
-app.get('/pub', function(request, response){
+ * Serves ad from iFrame call
+ *
+ * Expects following query args:
+ * - id : creative group ID
+ * - pid : placement ID
+ * - impid : impression ID
+ */
+app.get('/crg', function(request, response){
+    if (!request.query.hasOwnProperty('id')){
+        response.status(404).send("ERROR 404: Creative not found - no ID Parameter provided");
+        logger.error('GET Request sent to /crg without a creative_group_id');
+        return;
+    }
+    // make the db call to get creative group details
+    advertiser_models.getNestedObjectById(request.query.crg_id, 'CreativeGroup', function(err, obj){
+        var creative = obj.getWeightedRandomCreative();
+        var html = img_creative_iframe({
+            click_url: util.format('%s?id=%s&redir=%s', BASE_CLICK_URL, creative._id, creative.click_url),
+            img_url: creative.url,
+            width: creative.w,
+            height: creative.h
+        });
+        response.send(html);
+    });
+
+});
+
+app.get(CLICK_PATH, function(request, response){
     // first check if incoming request has necessary query params
     if (!request.query.hasOwnProperty('placement_id')){
         response.status(404).send("ERROR 404: Page not found - no placement_id parameter provided.");
         logger.error('GET Request sent to /pub with no placement_id');
-        return
+        return;
     }
-    auctioneer.main(request, response, function(err, winning_bid){
-        if (err) {
-            default_condition(response);
-        } else {
-            response.status(200).json(winning_bid);
-        }
-        logger.httpResponse(response);
-        logger.impression(err, request, response, winning_bid);
-    });
 });
 
-/**
- * RTB Test page, just a placeholder
- */
-app.get('/rtb_test', function(request, response){
-    // fake the referer address just for show in the request data object
-    request.headers.referer = 'http://' + request.headers['host'] + request.originalUrl;
-    // generate request data again just for show
-    request.query = {"placement_id": "54f8df2e6bcc85d9653becfb"};
-    var qs = querystring.encode(request.query);
-    auctioneer._create_single_imp_bid_request(request,function(err,request_data){
-        var fn = jade.compileFile('./templates/rtb_test.jade', null);
-        var html = fn({request_data: JSON.stringify(request_data, null, 2), qs: qs});
-        response.send(html);
-    });
+app.get('/conv', function(request, response){
 });
-
-/* ------------------- EXPORTS mostly just for unittesting ------------------- */
-
-exports.app = app;
-exports.exchangeMongoURI = exchangeMongoURI;
-exports.exchangeMongoOptions = exchangeMongoOptions;
-exports.userMongoURI = userMongoURI;
-exports.userMongoOptions = userMongoOptions;
-exports.devNullLogger = devNullLogger;

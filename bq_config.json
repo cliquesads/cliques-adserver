@@ -1,5 +1,24 @@
 {
   "event_tables":{
+    "IMPRESSION": {
+      "tableId": "impressions",
+      "datasetId": "ad_events",
+      "schema": {
+        "fields": [
+          {"name": "hostname", "type": "STRING"},
+          {"name": "level","type": "STRING"},
+          {"name": "msg","type": "STRING"},
+          {"name": "tstamp","type": "TIMESTAMP"},
+          {"name": "uuid","type": "STRING"},
+          {"name": "impid","type": "STRING"},
+          {"name": "creative","type": "STRING"},
+          {"name": "creative_group","type": "STRING"},
+          {"name": "campaign","type": "STRING"},
+          {"name": "advertiser","type": "STRING"},
+          {"name": "adv_clique","type": "STRING"}
+        ]
+      }
+    },
     "CLICK": {
       "tableId": "clicks",
       "datasetId": "ad_events",
@@ -11,7 +30,7 @@
           {"name": "tstamp","type": "TIMESTAMP"},
           {"name": "uuid","type": "STRING"},
           {"name": "clickid","type": "STRING"},
-          {"name": "placement","type": "STRING"},
+          {"name": "placement","type": "STRING"}
         ]
       }
     },
