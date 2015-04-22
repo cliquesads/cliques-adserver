@@ -168,6 +168,10 @@ app.get(urls.IMP_PATH, function(request, response){
     });
 });
 
+/**
+ * Endpoint to handle clicks.  Redirects to whatever URL is specified in the 'redir' query param.
+ *
+ */
 app.get(urls.CLICK_PATH, function(request, response){
     // first check if incoming request has necessary query params
     if (!request.query.hasOwnProperty('redir')){

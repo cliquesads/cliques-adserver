@@ -12,7 +12,7 @@
           {"name": "uuid","type": "STRING"},
           {"name": "impid","type": "STRING"},
           {"name": "creative","type": "STRING"},
-          {"name": "creative_group","type": "STRING"},
+          {"name": "creativegroup","type": "STRING"},
           {"name": "campaign","type": "STRING"},
           {"name": "advertiser","type": "STRING"},
           {"name": "adv_clique","type": "STRING"}
