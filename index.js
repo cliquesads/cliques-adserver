@@ -143,18 +143,21 @@ app.get(urls.IMP_PATH, function(request, response){
     impURL.parse(request.query, secure);
 
     advertiser_models.getNestedObjectById(request.query.crgid, 'CreativeGroup', function(err, obj){
-        if (err)
+        if (err) {
+            logger.error('Error trying to query creativeGroup from DB: ' + err);
+            response.status(500).send('Something went wrong');
+            return;
+        }
         var creative = obj.getWeightedRandomCreative();
         var clickURL = new urls.ClickURL();
-
         clickURL.format({
-            cid: creative._id,
+            cid: creative.id,
             pid: impURL.pid,
             redir: creative.click_url
         }, impURL.secure);
 
         var html = img_creative_iframe({
-            click_url: clickURL,
+            click_url: clickURL.url,
             img_url: creative.url,
             width: creative.w,
             height: creative.h
@@ -181,4 +184,5 @@ app.get(urls.CLICK_PATH, function(request, response){
 });
 
 app.get('/conv', function(request, response){
+
 });
