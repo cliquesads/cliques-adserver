@@ -66,8 +66,7 @@ var EXCHANGE_CONNECTION = db.createConnectionWrapper(exchangeMongoURI, exchangeM
     if (err) throw err;
     logger.info(logstring);
 });
-
-var advertiser_models = db.models.AdvertiserModels(EXCHANGE_CONNECTION);
+var advertiser_models = new db.models.AdvertiserModels(EXCHANGE_CONNECTION);
 
 /* ------------------- MONGODB - USER DB ------------------- */
 
