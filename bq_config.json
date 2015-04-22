@@ -30,7 +30,9 @@
           {"name": "tstamp","type": "TIMESTAMP"},
           {"name": "uuid","type": "STRING"},
           {"name": "clickid","type": "STRING"},
-          {"name": "placement","type": "STRING"}
+          {"name": "creative","type": "STRING"},
+          {"name": "placement","type": "STRING"},
+          {"name": "redir","type": "STRING"}
         ]
       }
     },

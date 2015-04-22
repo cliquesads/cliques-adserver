@@ -2,6 +2,7 @@
 var node_utils = require('cliques_node_utils');
 var cliques_cookies = node_utils.cookies;
 var logging = require('./lib/adserver_logging');
+var urls = require('./lib/urls');
 var db = node_utils.mongodb;
 var bigQueryUtils = node_utils.google.bigQueryUtils;
 var googleAuth = node_utils.google.auth;
@@ -9,6 +10,7 @@ var googleAuth = node_utils.google.auth;
 //third-party packages
 //have to require PMX before express to enable monitoring
 var express = require('express');
+var url = require('url');
 var app = express();
 var jade = require('jade');
 var querystring = require('querystring');
@@ -110,7 +112,6 @@ app.use(function(req, res, next){
     logger.httpRequestMiddleware(req, res, next);
 });
 
-
 /*  ------------------- Jade Templates ------------------- */
 
 var img_creative_iframe  = jade.compileFile('./templates/img_creative_iframe.jade', null);
@@ -125,44 +126,61 @@ app.get('/', function(request, response) {
     response.send('nothing to see here');
 });
 
-var CLICK_PATH = 'clk';
-var BASE_CLICK_URL = util.format('%s:%s/%s',config.get('Adserver.http.host'),config.get('Adserver.http.host'),CLICK_PATH);
 /**
  * Serves ad from iFrame call
  *
  * Expects following query args:
- * - id : creative group ID
+ * - crgid : creative group ID
  * - pid : placement ID
  * - impid : impression ID
  */
-app.get('/crg', function(request, response){
+app.get(urls.IMP_PATH, function(request, response){
     if (!request.query.hasOwnProperty('id')){
         response.status(404).send("ERROR 404: Creative not found - no ID Parameter provided");
         logger.error('GET Request sent to /crg without a creative_group_id');
         return;
     }
     // make the db call to get creative group details
-    advertiser_models.getNestedObjectById(request.query.crg_id, 'CreativeGroup', function(err, obj){
+    var impURL = new urls.ImpURL();
+    var secure = (request.protocol == 'https');
+    impURL.parse(request.query, secure);
+
+    advertiser_models.getNestedObjectById(request.query.crgid, 'CreativeGroup', function(err, obj){
+        if (err)
         var creative = obj.getWeightedRandomCreative();
-        var click_url = util.format('%s?id=%s&redir=%s', BASE_CLICK_URL, creative._id, encodeURIComponent(creative.click_url));
+        var clickURL = new urls.ClickURL();
+
+        clickURL.format({
+            cid: creative._id,
+            pid: impURL.pid,
+            redir: creative.click_url
+        }, impURL.secure);
+
         var html = img_creative_iframe({
-            click_url: click_url,
+            click_url: clickURL,
             img_url: creative.url,
             width: creative.w,
             height: creative.h
         });
         response.send(html);
-    });
 
+        logger.impression(request, response, impURL, obj, creative);
+    });
 });
 
-app.get(CLICK_PATH, function(request, response){
+app.get(urls.CLICK_PATH, function(request, response){
     // first check if incoming request has necessary query params
-    if (!request.query.hasOwnProperty('placement_id')){
-        response.status(404).send("ERROR 404: Page not found - no placement_id parameter provided.");
-        logger.error('GET Request sent to /pub with no placement_id');
+    if (!request.query.hasOwnProperty('redir')){
+        response.status(404).send("ERROR 404: No redirect url specified");
+        logger.error('GET Request sent to click path with no placement_id');
         return;
     }
+    var clickURL = new urls.ClickURL();
+    var secure = (request.protocol == 'https');
+    clickURL.parse(request.query, secure);
+    response.status(302).set('location', clickURL.redir);
+    response.send();
+    logger.click(request, response, clickURL);
 });
 
 app.get('/conv', function(request, response){
