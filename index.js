@@ -10,10 +10,8 @@ var googleAuth = node_utils.google.auth;
 //third-party packages
 //have to require PMX before express to enable monitoring
 var express = require('express');
-var url = require('url');
 var app = express();
 var jade = require('jade');
-var querystring = require('querystring');
 var requestIp = require('request-ip');
 var winston = require('winston');
 var path = require('path');
@@ -135,7 +133,7 @@ app.get('/', function(request, response) {
  * - impid : impression ID
  */
 app.get(urls.IMP_PATH, function(request, response){
-    if (!request.query.hasOwnProperty('id')){
+    if (!request.query.hasOwnProperty('crgid')){
         response.status(404).send("ERROR 404: Creative not found - no ID Parameter provided");
         logger.error('GET Request sent to /crg without a creative_group_id');
         return;
