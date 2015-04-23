@@ -86,6 +86,12 @@ var USER_CONNECTION = db.createConnectionWrapper(userMongoURI, userMongoOptions,
     logger.info(logstring);
 });
 
+/* ------------------- HOSTNAME VARIABLES ------------------- */
+
+// hostname var is external hostname, not localhost
+var hostname = config.get('AdServer.http.hostname');
+var port = (config.get('AdServer.http.port') || 5000);
+
 /* ------------------- EXPRESS MIDDLEWARE ------------------- */
 
 // inside request-ip middleware handler
@@ -95,7 +101,7 @@ app.use(function(req, res, next) {
 });
 app.use(cookieParser());
 app.use(responseTime());
-app.set('port', (config.get('AdServer.http.port') || 5000));
+app.set('port', port);
 app.use(express.static(__dirname + '/public'));
 
 // custom cookie-parsing middleware
@@ -138,18 +144,18 @@ app.get(urls.IMP_PATH, function(request, response){
         return;
     }
     // make the db call to get creative group details
-    var impURL = new urls.ImpURL();
+    var impURL = new urls.ImpURL(hostname, port);
     var secure = (request.protocol == 'https');
     impURL.parse(request.query, secure);
 
-    advertiser_models.getNestedObjectById(request.query.crgid, 'CreativeGroup', function(err, obj){
+    advertiser_models.getNestedObjectById(impURL.crgid, 'CreativeGroup', function(err, obj){
         if (err) {
             logger.error('Error trying to query creativeGroup from DB: ' + err);
             response.status(500).send('Something went wrong');
             return;
         }
         var creative = obj.getWeightedRandomCreative();
-        var clickURL = new urls.ClickURL();
+        var clickURL = new urls.ClickURL(hostname, port);
         clickURL.format({
             cid: creative.id,
             pid: impURL.pid,
@@ -179,7 +185,7 @@ app.get(urls.CLICK_PATH, function(request, response){
         logger.error('GET Request sent to click path with no placement_id');
         return;
     }
-    var clickURL = new urls.ClickURL();
+    var clickURL = new urls.ClickURL(hostname, port);
     var secure = (request.protocol == 'https');
     clickURL.parse(request.query, secure);
     response.status(302).set('location', clickURL.redir);
