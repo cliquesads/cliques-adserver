@@ -171,7 +171,7 @@ app.get(urls.IMP_PATH, function(request, response){
             height: creative.h
         });
         response.send(html);
-
+        logger.httpResponse(response);
         logger.impression(request, response, impURL, obj, creative);
     });
 });
@@ -193,6 +193,7 @@ app.get(urls.CLICK_PATH, function(request, response){
     clickURL.parse(request.query, secure);
     response.status(302).set('location', clickURL.redir);
     response.send();
+    logger.httpResponse(response);
     logger.click(request, response, clickURL);
 });
 
