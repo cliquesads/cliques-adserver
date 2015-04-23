@@ -143,11 +143,13 @@ app.get(urls.IMP_PATH, function(request, response){
         logger.error('GET Request sent to /crg without a creative_group_id');
         return;
     }
-    // make the db call to get creative group details
+
+    //TODO: Remove port once in prod
     var impURL = new urls.ImpURL(hostname, port);
     var secure = (request.protocol == 'https');
     impURL.parse(request.query, secure);
 
+    // make the db call to get creative group details
     advertiser_models.getNestedObjectById(impURL.crgid, 'CreativeGroup', function(err, obj){
         if (err) {
             logger.error('Error trying to query creativeGroup from DB: ' + err);
@@ -185,6 +187,7 @@ app.get(urls.CLICK_PATH, function(request, response){
         logger.error('GET Request sent to click path with no placement_id');
         return;
     }
+    //TODO: Remove port once in prod
     var clickURL = new urls.ClickURL(hostname, port);
     var secure = (request.protocol == 'https');
     clickURL.parse(request.query, secure);
