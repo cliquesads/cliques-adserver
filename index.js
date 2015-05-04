@@ -9,6 +9,7 @@ var googleAuth = node_utils.google.auth;
 
 //third-party packages
 //have to require PMX before express to enable monitoring
+var pmx = require('pmx').init();
 var express = require('express');
 var app = express();
 var jade = require('jade');
