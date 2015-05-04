@@ -47,7 +47,8 @@
           {"name": "tstamp","type": "TIMESTAMP"},
           {"name": "uuid","type": "STRING"},
           {"name": "convid","type": "STRING"},
-          {"name": "placement","type": "STRING"},
+          {"name": "tag","type": "STRING"},
+          {"name": "advertiser","type": "STRING"},
           {"name": "value","type": "STRING"}
         ]
       }
