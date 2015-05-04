@@ -92,7 +92,7 @@ var USER_CONNECTION = db.createConnectionWrapper(userMongoURI, userMongoOptions,
 
 // hostname var is external hostname, not localhost
 var hostname = config.get('AdServer.http.external.hostname');
-var port = (config.get('AdServer.http.external.port'));
+var port = config.get('AdServer.http.external.port');
 
 /* ------------------- EXPRESS MIDDLEWARE ------------------- */
 
