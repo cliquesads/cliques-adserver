@@ -91,8 +91,8 @@ var USER_CONNECTION = db.createConnectionWrapper(userMongoURI, userMongoOptions,
 /* ------------------- HOSTNAME VARIABLES ------------------- */
 
 // hostname var is external hostname, not localhost
-var hostname = config.get('AdServer.http.hostname');
-var port = (config.get('AdServer.http.port') || 5000);
+var hostname = config.get('AdServer.http.external.hostname');
+var port = (config.get('AdServer.http.external.port'));
 
 /* ------------------- EXPRESS MIDDLEWARE ------------------- */
 
@@ -103,7 +103,7 @@ app.use(function(req, res, next) {
 });
 app.use(cookieParser());
 app.use(responseTime());
-app.set('port', port);
+app.set('port', (config.get('AdServer.http.port') || 5000));
 app.use(express.static(__dirname + '/public'));
 
 // custom cookie-parsing middleware
