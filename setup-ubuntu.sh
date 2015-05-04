@@ -5,7 +5,8 @@ sudo apt-get update
 sudo apt-get install gcc make build-essential
 
 #download NVM and install NVM & node
-curl https://raw.githubusercontent.com/creationix/nvm/v0.24.0/install.sh | NVM_DIR=$HOME/repositories/adexchange/.nvm bash
+mkdir
+curl https://raw.githubusercontent.com/creationix/nvm/v0.24.0/install.sh | NVM_DIR=$HOME/repositories/cliques-adserver/.nvm bash
 source .nvm/nvm.sh
 nvm install 0.12.0
 
@@ -15,8 +16,8 @@ source ./activate_production.sh
 npm update
 npm install
 #have to install pm2 & mocha globally into nvm dir
-npm install pm2 -g
-npm install mocha -g
+sudo npm install pm2 -g
+sudo npm install mocha -g
 
 #clone config repo and make symlink
 if [ ! -d $HOME"/repositories/cliques-config" ]; then
