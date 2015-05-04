@@ -3,6 +3,7 @@
 #system deps
 sudo apt-get update
 sudo apt-get install gcc make build-essential
+sudo apt-get install redis-server
 
 #download NVM and install NVM & node
 mkdir
@@ -14,6 +15,8 @@ nvm use 0.12.0
 #install node dependencies
 npm update
 npm install
+# TODO: Fix this, doesnt install pm2 or mocha packages properly in
+# TODO: nvm dir
 #have to install pm2 & mocha globally into nvm dir
 sudo npm install pm2 -g
 sudo npm install mocha -g
@@ -23,3 +26,4 @@ if [ ! -d $HOME"/repositories/cliques-config" ]; then
     git clone git@github.com:cliquesads/cliques-config.git ../cliques-config
     ln -s ../cliques-config config
 fi
+

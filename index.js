@@ -29,6 +29,7 @@ var config = require('config');
 
 var logfile = path.join(
     process.env['HOME'],
+    'data',
     'logs',
     util.format('adserver_%s.log',node_utils.dates.isoFormatUTCNow())
 );
