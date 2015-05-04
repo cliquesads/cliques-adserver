@@ -10,7 +10,15 @@ curl https://raw.githubusercontent.com/creationix/nvm/v0.24.0/install.sh | NVM_D
 source .nvm/nvm.sh
 nvm install 0.12.0
 
-source ./activate_production.sh
+export NODE_ENV=production
+
+#have to point to the right version of node, npm, pm2, mocha
+node_version='0.12.0'
+node_path='.nvm/versions/node/v'$node_version'/bin/'
+export node=$node_path'node'
+export npm=$node_path'npm'
+export pm2=$node_path'pm2'
+export mocha=$node_path'mocha'
 
 #install node dependencies
 npm update
