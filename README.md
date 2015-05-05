@@ -36,3 +36,23 @@ Conversion endpoint, called by tracker pixel.
 - `value` :  Cart value or any arbitrary value associated with conversion
 - `advid` :  ObjectID of advertiser object, owner of this tag
 
+## Setup & Dependencies
+Key dependency is Redis v2.8 or greater.  To install & run redis (current version 3.0.1), run:
+```
+$ ./setup_redis.sh
+```
+To set up a new machine (Debian or Ubuntu) for the first time, run:
+```
+$ ./setup_ubuntu.sh
+```
+
+## Deployment
+Once your machine is all setup and Redis is running, you can deploy:
+
+```
+$ git pull
+$ ./deploy_adserver.sh
+```
+
+
+
