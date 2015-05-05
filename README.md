@@ -26,3 +26,13 @@ Click endpoint.
 - `cid` :  ObjectID of creative object
 - `pid`   :  ObjectID of placement object
 
+## /cnv
+Conversion endpoint, called by tracker pixel.
+
+- Logs conversion and all associated metadata
+
+#### Query Params
+- `tagid` :  **REQUIRED** ObjectID of tracking tag object
+- `value` :  Cart value or any arbitrary value associated with conversion
+- `advid` :  ObjectID of advertiser object, owner of this tag
+
