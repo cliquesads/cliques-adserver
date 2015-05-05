@@ -1,9 +1,9 @@
 # cliques-adserver
 Cliques Adserver contains endpoints to handle impressions, clicks and conversions, all post-auction.
 
-# Endpoints
+## Endpoints
 
-## /crg
+### /crg
 Impression endpoint. (crg is short for 'Creative Group'.)  
 
 - Looks up creatives in this creative group and pick a creative according to weights assigned to each, then return the appropriate creative tag for this asset
@@ -15,7 +15,7 @@ Impression endpoint. (crg is short for 'Creative Group'.)
 - `pid`   :  ObjectID of placement object in which this ad is being rendered. Passed through by exchange.
 
 
-## /clk
+### /clk
 Click endpoint.
 
 - Redirects to desination URL
@@ -26,7 +26,7 @@ Click endpoint.
 - `cid` :  ObjectID of creative object
 - `pid`   :  ObjectID of placement object
 
-## /cnv
+### /cnv
 Conversion endpoint, called by tracker pixel.
 
 - Logs conversion and all associated metadata
