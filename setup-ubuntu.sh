@@ -10,6 +10,12 @@ if [ ! -d $HOME"/repositories/cliques-config" ]; then
     ln -s ../cliques-config config
 fi
 
+#setup logging dir
+if [ ! -d $HOME"/data/logs" ]; then
+    mkdir $HOME"/data/logs"
+fi
+
+#setup and run redis
 ./setup-redis.sh
 
 #download NVM and install NVM & node
