@@ -1,6 +1,7 @@
 #!/bin/bash
 
 source ./activate_production.sh
+nvm use 0.12.0
 npm install
 
 if [ ! -d $HOME"/repositories/cliques-config" ]; then
