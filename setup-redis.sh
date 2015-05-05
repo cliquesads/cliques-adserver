@@ -2,7 +2,7 @@
 
 #install redis from source to ensure latest version
 REDISVERSION='3.0.1'
-REDISPATH=$HOME"/redis-"$REDISVERSION
+REDISPATH=$HOME'/redis-'$REDISVERSION
 
 if [ ! -d $REDISPATH ]; then
     cd $HOME
@@ -10,7 +10,8 @@ if [ ! -d $REDISPATH ]; then
     tar xzf 'redis-'$REDISVERSION'.tar.gz'
     cd 'redis-'$REDISVERSION
     make
+    rm $HOME'/redis-'$REDISVERSION'.tar.gz'
 fi
 
-cd $REDISPATH"/src"
+cd $REDISPATH'/src'
 ./redis-server $HOME/repositories/cliques-config/redis/redis.conf
