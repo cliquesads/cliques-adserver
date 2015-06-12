@@ -32,7 +32,8 @@
           {"name": "clickid","type": "STRING"},
           {"name": "creative","type": "STRING"},
           {"name": "placement","type": "STRING"},
-          {"name": "redir","type": "STRING"}
+          {"name": "redir","type": "STRING"},
+          {"name": "impid","type": "STRING"}
         ]
       }
     },
