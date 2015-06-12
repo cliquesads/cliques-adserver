@@ -163,7 +163,8 @@ app.get(urls.IMP_PATH, function(request, response){
         clickURL.format({
             cid: creative.id,
             pid: impURL.pid,
-            redir: creative.click_url
+            redir: creative.click_url,
+            impid: impURL.impid
         }, impURL.secure);
 
         var html = img_creative_iframe({
