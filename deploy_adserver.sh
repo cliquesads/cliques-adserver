@@ -18,7 +18,7 @@ running=$(pm2 list -m | grep "$processname")
 
 if [ -z "$running" ]; then
     # hook PM2 up to web monitoring with KeyMetrics
-    pm2 interact d39yzaslt8iu57e w77ttxdzer9p8zv
+    pm2 link d39yzaslt8iu57e w77ttxdzer9p8zv $hostname
     # start in cluster mode
     pm2 start index.js --name "$processname" -i 0
 else
