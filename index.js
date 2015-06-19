@@ -201,10 +201,13 @@ app.get(urls.CLICK_PATH, function(request, response){
     logger.click(request, response, clickURL);
 });
 
-app.get(urls.CONV_PATH, function(request, response){
-    var convURL = new urls.ConvURL(hostname, port);
+/**
+ * Endpoint to handle conversions (actions)
+ */
+app.get(urls.ACTION_PATH, function(request, response){
+    var actURL = new urls.ActionBeaconURL(hostname, port);
     var secure = (request.protocol == 'https');
-    convURL.parse(request.query, secure);
+    actURL.parse(request.query, secure);
     response.status(200).send();
-    logger.conversion(request, response, convURL);
+    logger.action(request, response, actURL);
 });

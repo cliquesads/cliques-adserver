@@ -37,8 +37,8 @@
         ]
       }
     },
-    "CONVERSION": {
-      "tableId": "conversions",
+    "ACTION": {
+      "tableId": "actions",
       "datasetId": "ad_events",
       "schema": {
         "fields": [
@@ -47,8 +47,8 @@
           {"name": "msg","type": "STRING"},
           {"name": "tstamp","type": "TIMESTAMP"},
           {"name": "uuid","type": "STRING"},
-          {"name": "convid","type": "STRING"},
-          {"name": "tag","type": "STRING"},
+          {"name": "actionid","type": "STRING"},
+          {"name": "actionbeacon","type": "STRING"},
           {"name": "advertiser","type": "STRING"},
           {"name": "value","type": "STRING"}
         ]
