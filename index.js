@@ -102,7 +102,7 @@ app.use(function(req, res, next) {
     req.clientIp = requestIp.getClientIp(req); // on localhost > 127.0.0.1
     next();
 });
-app.use(cookieParser());
+app.use(cookieParser(null, {'domain': '.cliquesads.com'}));
 app.use(responseTime());
 app.set('port', (config.get('AdServer.http.port') || 5000));
 app.use(express.static(__dirname + '/public'));
