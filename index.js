@@ -131,7 +131,7 @@ app.listen(app.get('port'), function(){
 });
 
 app.get('/', function(request, response) {
-    response.status(404).send('You\'ve reached this page in error');
+    response.status(200).send();
 });
 
 /**
