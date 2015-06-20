@@ -102,13 +102,15 @@ app.use(function(req, res, next) {
     req.clientIp = requestIp.getClientIp(req); // on localhost > 127.0.0.1
     next();
 });
-app.use(cookieParser(null, {'domain': '.cliquesads.com'}));
+app.use(cookieParser());
 app.use(responseTime());
 app.set('port', (config.get('AdServer.http.port') || 5000));
 app.use(express.static(__dirname + '/public'));
 
 // custom cookie-parsing middleware
-var cookie_handler = new cliques_cookies.CookieHandler(config.get('Exchange.cookies.expirationdays'),USER_CONNECTION);
+var days_expiration = config.get('Cookies.expirationdays');
+var domain = config.get('Cookies.domain');
+var cookie_handler = new cliques_cookies.CookieHandler(days_expiration,domain,USER_CONNECTION);
 app.use(function(req, res, next){
     cookie_handler.get_or_set_uuid(req, res, next);
 });
@@ -129,7 +131,7 @@ app.listen(app.get('port'), function(){
 });
 
 app.get('/', function(request, response) {
-    response.send('nothing to see here');
+    response.status(404).send('You\'ve reached this page in error');
 });
 
 /**
