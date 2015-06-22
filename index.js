@@ -165,6 +165,7 @@ app.get(urls.IMP_PATH, function(request, response){
         var clickURL = new urls.ClickURL(hostname, port);
         clickURL.format({
             cid: creative.id,
+            advid: obj.parent_advertiser.id,
             pid: impURL.pid,
             redir: creative.click_url,
             impid: impURL.impid
