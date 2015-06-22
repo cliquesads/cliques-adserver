@@ -166,6 +166,8 @@ app.get(urls.IMP_PATH, function(request, response){
         clickURL.format({
             cid: creative.id,
             advid: obj.parent_advertiser.id,
+            crgid: obj.id,
+            campid: obj.parent_campaign.id,
             pid: impURL.pid,
             redir: creative.click_url,
             impid: impURL.impid
