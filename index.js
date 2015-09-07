@@ -11,7 +11,10 @@ var googleAuth = node_utils.google.auth;
 //have to require PMX before express to enable monitoring
 var pmx = require('pmx').init();
 var express = require('express');
+var https = require('https');
+var http = require('http');
 var app = express();
+var fs = require('fs');
 var jade = require('jade');
 var requestIp = require('request-ip');
 var winston = require('winston');
@@ -104,7 +107,8 @@ app.use(function(req, res, next) {
 });
 app.use(cookieParser());
 app.use(responseTime());
-app.set('port', (config.get('AdServer.http.port') || 5000));
+app.set('http_port', (config.get('AdServer.http.port') || 5000));
+app.set('https_port', (config.get('AdServer.https.port') || 443));
 app.use(express.static(__dirname + '/public'));
 
 // custom cookie-parsing middleware
@@ -126,9 +130,12 @@ var img_creative_iframe  = jade.compileFile('./templates/img_creative_iframe.jad
 
 /*  ------------------- HTTP Endpoints  ------------------- */
 
-app.listen(app.get('port'), function(){
-    logger.info("Cliques AdServer is running at localhost:" + app.get('port'));
-});
+http.createServer(app).listen(app.get('http_port'));
+https.createServer({
+    key: fs.readFileSync('./config/cert/star_cliquesads_com.key'),
+    cert: fs.readFileSync('./config/cert/star_cliquesads_com.crt'),
+    ca: fs.readFileSync('./config/cert/DigiCertCA.crt')
+}, app).listen(3000);
 
 app.get('/', function(request, response) {
     response.status(200).send();
