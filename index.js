@@ -108,7 +108,7 @@ app.use(function(req, res, next) {
 app.use(cookieParser());
 app.use(responseTime());
 app.set('http_port', (config.get('AdServer.http.port') || 5000));
-app.set('https_port', (config.get('AdServer.https.port') || 443));
+app.set('https_port', (config.get('AdServer.https.port') || 3000));
 app.use(express.static(__dirname + '/public'));
 
 // custom cookie-parsing middleware
@@ -135,7 +135,7 @@ https.createServer({
     key: fs.readFileSync('./config/cert/star_cliquesads_com.key'),
     cert: fs.readFileSync('./config/cert/star_cliquesads_com.crt'),
     ca: fs.readFileSync('./config/cert/DigiCertCA.crt')
-}, app).listen(3000);
+}, app).listen(app.get('https_port'));
 
 app.get('/', function(request, response) {
     response.status(200).send();
