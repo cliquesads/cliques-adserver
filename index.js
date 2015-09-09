@@ -94,9 +94,11 @@ var USER_CONNECTION = db.createConnectionWrapper(userMongoURI, userMongoOptions,
 
 /* ------------------- HOSTNAME VARIABLES ------------------- */
 
-// hostname var is external hostname, not localhost
-var hostname = config.get('AdServer.http.external.hostname');
-var port = config.get('AdServer.http.external.port');
+// http_hostname var is external http_hostname, not localhost
+var http_hostname = config.get('AdServer.http.external.hostname');
+var https_hostname = config.get('AdServer.https.external.hostname');
+var http_port = config.get('AdServer.http.external.port');
+var https_port = config.get('AdServer.https.external.port');
 
 /* ------------------- EXPRESS MIDDLEWARE ------------------- */
 
@@ -157,8 +159,9 @@ app.get(urls.IMP_PATH, function(request, response){
     }
 
     //TODO: Remove port once in prod
-    var impURL = new urls.ImpURL(hostname, port);
     var secure = (request.protocol == 'https');
+    var port = secure ? https_port: http_port;
+    var impURL = new urls.ImpURL(http_hostname, https_hostname, port);
     impURL.parse(request.query, secure);
 
     // make the db call to get creative group details
@@ -169,7 +172,7 @@ app.get(urls.IMP_PATH, function(request, response){
             return;
         }
         var creative = obj.getWeightedRandomCreative();
-        var clickURL = new urls.ClickURL(hostname, port);
+        var clickURL = new urls.ClickURL(http_hostname, https_hostname, port);
         clickURL.format({
             cid: creative.id,
             advid: obj.parent_advertiser.id,
@@ -179,6 +182,7 @@ app.get(urls.IMP_PATH, function(request, response){
             redir: creative.click_url,
             impid: impURL.impid
         }, impURL.secure);
+        console.log(clickURL.url);
 
         var html = img_creative_iframe({
             click_url: clickURL.url,
@@ -204,8 +208,9 @@ app.get(urls.CLICK_PATH, function(request, response){
         return;
     }
     //TODO: Remove port once in prod
-    var clickURL = new urls.ClickURL(hostname, port);
     var secure = (request.protocol == 'https');
+    var port = secure ? https_port: http_port;
+    var clickURL = new urls.ClickURL(http_hostname, https_hostname, port);
     clickURL.parse(request.query, secure);
     response.status(302).set('location', clickURL.redir);
     response.send();
@@ -217,8 +222,9 @@ app.get(urls.CLICK_PATH, function(request, response){
  * Endpoint to handle conversions (actions)
  */
 app.get(urls.ACTION_PATH, function(request, response){
-    var actURL = new urls.ActionBeaconURL(hostname, port);
     var secure = (request.protocol == 'https');
+    var port = secure ? https_port: http_port;
+    var actURL = new urls.ActionBeaconURL(http_hostname, https_hostname, port);
     actURL.parse(request.query, secure);
     response.status(200).send();
     logger.action(request, response, actURL);
