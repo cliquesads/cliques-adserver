@@ -129,6 +129,7 @@ app.use(function(req, res, next){
 /*  ------------------- Jade Templates ------------------- */
 
 var img_creative_iframe  = jade.compileFile('./templates/img_creative_iframe.jade', null);
+var doubleclick_javascript  = jade.compileFile('./templates/doubleclick_javascript.jade', null);
 
 /*  ------------------- HTTP Endpoints  ------------------- */
 
@@ -164,6 +165,17 @@ app.get(urls.IMP_PATH, function(request, response){
     var impURL = new urls.ImpURL(http_hostname, https_hostname, port);
     impURL.parse(request.query, secure);
 
+    //Temporary function to handle switching between doubleclick & internal click URLs
+    function getRedir(creative){
+        if (creative.type === 'doubleclick'){
+            // This only works because DFA ads append click URL directly to the end
+            // of the third-party provided click URL
+            return '';
+        } else {
+            return creative.click_url;
+        }
+    }
+
     // make the db call to get creative group details
     advertiser_models.getNestedObjectById(impURL.crgid, 'CreativeGroup', function(err, obj){
         if (err) {
@@ -179,17 +191,27 @@ app.get(urls.IMP_PATH, function(request, response){
             crgid: obj.id,
             campid: obj.parent_campaign.id,
             pid: impURL.pid,
-            redir: creative.click_url,
-            impid: impURL.impid
+            impid: impURL.impid,
+            redir: getRedir(creative)
         }, impURL.secure);
-        console.log(clickURL.url);
 
-        var html = img_creative_iframe({
-            click_url: clickURL.url,
-            img_url: creative.url,
-            width: creative.w,
-            height: creative.h
-        });
+        if (creative.type === 'doubleclick'){
+            // TODO: Make this more robust, this is terrible
+            var tag = urls.expandURLMacros(creative.tag, {
+                cachebuster: Date.now().toString(),
+                click_url: clickURL.url
+            });
+            var html = doubleclick_javascript({
+                doubleclick_tag: tag
+            });
+        } else {
+            html = img_creative_iframe({
+                click_url: clickURL.url,
+                img_url: creative.url,
+                width: creative.w,
+                height: creative.h
+            });
+        }
         response.send(html);
         logger.httpResponse(response);
         logger.impression(request, response, impURL, obj, creative);
