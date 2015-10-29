@@ -144,6 +144,17 @@ app.get('/', function(request, response) {
     response.status(200).send();
 });
 
+//Temporary function to handle switching between doubleclick & internal click URLs
+function getRedir(creative){
+    if (creative.type === 'doubleclick'){
+        // This only works because DFA ads append click URL directly to the end
+        // of the third-party provided click URL
+        return '';
+    } else {
+        return creative.click_url;
+    }
+}
+
 /**
  * Serves ad from iFrame call
  *
@@ -164,17 +175,6 @@ app.get(urls.IMP_PATH, function(request, response){
     var port = secure ? https_port: http_port;
     var impURL = new urls.ImpURL(http_hostname, https_hostname, port);
     impURL.parse(request.query, secure);
-
-    //Temporary function to handle switching between doubleclick & internal click URLs
-    function getRedir(creative){
-        if (creative.type === 'doubleclick'){
-            // This only works because DFA ads append click URL directly to the end
-            // of the third-party provided click URL
-            return '';
-        } else {
-            return creative.click_url;
-        }
-    }
 
     // make the db call to get creative group details
     advertiser_models.getNestedObjectById(impURL.crgid, 'CreativeGroup', function(err, obj){
@@ -215,6 +215,65 @@ app.get(urls.IMP_PATH, function(request, response){
         response.send(html);
         logger.httpResponse(response);
         logger.impression(request, response, impURL, obj, creative);
+    });
+});
+
+/**
+ * Serves ad from iFrame call
+ *
+ * Expects following query args:
+ * - crgid : creative group ID
+ * - pid : placement ID
+ * - impid : impression ID
+ */
+app.get(urls.CR_PATH, function(request, response){
+    if (!request.query.hasOwnProperty('cid')){
+        response.status(404).send("ERROR 404: Creative not found - no ID Parameter provided");
+        logger.error('GET Request sent to /cr without a creative_id');
+        return;
+    }
+
+    //TODO: Remove port once in prod
+    var secure = (request.protocol == 'https');
+    var port = secure ? https_port: http_port;
+    var crURL = new urls.CreativeURL(http_hostname, https_hostname, port);
+    crURL.parse(request.query, secure);
+
+    // make the db call to get creative group details
+    advertiser_models.getNestedObjectById( crURL.cid, 'Creative', function(err, creative){
+        if (err) {
+            logger.error('Error trying to query creativeGroup from DB: ' + err);
+            response.status(500).send('Something went wrong');
+            return;
+        }
+        var clickURL = new urls.ClickURL(http_hostname, https_hostname, port);
+        clickURL.format({
+            cid: creative.id,
+            advid: creative.parent_advertiser.id,
+            crgid: creative.parent_creativegroup.id,
+            campid: creative.parent_campaign.id,
+            redir: getRedir(creative)
+        },  crURL.secure);
+
+        if (creative.type === 'doubleclick'){
+            // TODO: Make this more robust, this is terrible
+            var tag = urls.expandURLMacros(creative.tag, {
+                cachebuster: Date.now().toString(),
+                click_url: clickURL.url
+            });
+            var html = doubleclick_javascript({
+                doubleclick_tag: tag
+            });
+        } else {
+            html = img_creative_iframe({
+                click_url: clickURL.url,
+                img_url: creative.url,
+                width: creative.w,
+                height: creative.h
+            });
+        }
+        response.send(html);
+        logger.httpResponse(response);
     });
 });
 
