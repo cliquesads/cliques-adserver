@@ -48,7 +48,70 @@ var getRedir = function(creative){
 }
 
 /**
- * Serves ad from iFrame call
+ * Utility function to handle bulk of the legwork in rendering a creative tag with proper vars.
+ *
+ * @param creative - any object conforming to creativeSchema
+ * @param secure - render as secure tag or non-secure
+ * @param [impURL] - optional impURL instance, which will be used to grab pid & impid params for clickURL
+ * @param callback
+ */
+var renderCreativeTag = function(creative, secure, impURL, callback){
+    if (!callback){
+        callback = impURL;
+    }
+    // Generate Cliques click URL
+    var clickURL = new urls.ClickURL(HTTP_HOSTNAME, HTTPS_HOSTNAME, port);
+    var clickURLOpts = {
+        cid: creative.id,
+        advid: creative.parent_advertiser.id,
+        crgid: creative.parent_creativegroup.id,
+        campid: creative.parent_campaign.id,
+        redir: getRedir(creative)
+    };
+    if (impURL){
+        clickURLOpts.pid = impURL.pid;
+        clickURLOpts.impid = impURL.impid;
+    }
+    clickURL.format(clickURLOpts, secure);
+
+    // Now generate tag HTML
+    if (creative.type === 'doubleclick'){
+        // TODO: Make this more robust, this is terrible
+        var tag = urls.expandURLMacros(creative.tag, {
+            cachebuster: Date.now().toString(),
+            click_url: clickURL.url
+        });
+        var html = doubleclick_javascript({
+            doubleclick_tag: tag
+        });
+    } else {
+        html = img_creative_iframe({
+            click_url: clickURL.url,
+            img_url: creative.url,
+            width: creative.w,
+            height: creative.h
+        });
+    }
+    return callback(null, html);
+};
+
+/*  ------------------- HTTP Endpoints  ------------------- */
+
+var app = express(USER_CONNECTION);
+
+app.get('/', function(request, response) {
+    response.status(200).send('Cliques AdServer');
+});
+
+/* --------------------------------------------------------- */
+/* ----------------- IMPRESSION Endpoints ------------------ */
+/* --------------------------------------------------------- */
+
+/**
+ * Serves ad from iFrame call given a creativegroup ID.
+ *
+ * Selects a "weighted random" creative from given creative group
+ * and serves it.
  *
  * Expects following query args:
  * - crgid : creative group ID
@@ -61,11 +124,9 @@ app.get(urls.IMP_PATH, function(request, response){
         logger.error('GET Request sent to /crg without a creative_group_id');
         return;
     }
-
-    //TODO: Remove port once in prod
     var secure = (request.protocol == 'https');
-    var port = secure ? https_port: http_port;
-    var impURL = new urls.ImpURL(http_hostname, https_hostname, port);
+    var port = secure ? HTTPS_PORT: HTTP_PORT;
+    var impURL = new urls.ImpURL(HTTP_HOSTNAME, HTTPS_HOSTNAME, port);
     impURL.parse(request.query, secure);
 
     // make the db call to get creative group details
@@ -76,45 +137,21 @@ app.get(urls.IMP_PATH, function(request, response){
             return;
         }
         var creative = obj.getWeightedRandomCreative();
-        var clickURL = new urls.ClickURL(http_hostname, https_hostname, port);
-        clickURL.format({
-            cid: creative.id,
-            advid: obj.parent_advertiser.id,
-            crgid: obj.id,
-            campid: obj.parent_campaign.id,
-            pid: impURL.pid,
-            impid: impURL.impid,
-            redir: getRedir(creative)
-        }, impURL.secure);
-
-        if (creative.type === 'doubleclick'){
-            // TODO: Make this more robust, this is terrible
-            var tag = urls.expandURLMacros(creative.tag, {
-                cachebuster: Date.now().toString(),
-                click_url: clickURL.url
-            });
-            var html = doubleclick_javascript({
-                doubleclick_tag: tag
-            });
-        } else {
-            html = img_creative_iframe({
-                click_url: clickURL.url,
-                img_url: creative.url,
-                width: creative.w,
-                height: creative.h
-            });
-        }
-        response.send(html);
-        logger.httpResponse(response);
-        logger.impression(request, response, impURL, obj, creative);
+        renderCreativeTag(creative, secure, impURL, function(err, html){
+            response.send(html);
+            logger.httpResponse(response);
+            logger.impression(request, response, impURL, obj, creative);
+        });
     });
 });
 
 /**
- * Serves ad from iFrame call
+ * Serves ad from iFrame call given an advertiser creativeID.
+ *
+ * This path handles requests for creative using creative ID, rather than creative Group.
  *
  * Expects following query args:
- * - crgid : creative group ID
+ * - crid : creative group ID
  * - pid : placement ID
  * - impid : impression ID
  */
@@ -124,11 +161,9 @@ app.get(urls.CR_PATH, function(request, response){
         logger.error('GET Request sent to /cr without a creative_id');
         return;
     }
-
-    //TODO: Remove port once in prod
     var secure = (request.protocol == 'https');
-    var port = secure ? https_port: http_port;
-    var crURL = new urls.CreativeURL(http_hostname, https_hostname, port);
+    var port = secure ? HTTPS_PORT: HTTP_PORT;
+    var crURL = new urls.CreativeURL(HTTP_HOSTNAME, HTTPS_HOSTNAME, port);
     crURL.parse(request.query, secure);
 
     // make the db call to get creative group details
@@ -138,36 +173,17 @@ app.get(urls.CR_PATH, function(request, response){
             response.status(500).send('Something went wrong');
             return;
         }
-        var clickURL = new urls.ClickURL(http_hostname, https_hostname, port);
-        clickURL.format({
-            cid: creative.id,
-            advid: creative.parent_advertiser.id,
-            crgid: creative.parent_creativegroup.id,
-            campid: creative.parent_campaign.id,
-            redir: getRedir(creative)
-        },  crURL.secure);
-
-        if (creative.type === 'doubleclick'){
-            // TODO: Make this more robust, this is terrible
-            var tag = urls.expandURLMacros(creative.tag, {
-                cachebuster: Date.now().toString(),
-                click_url: clickURL.url
-            });
-            var html = doubleclick_javascript({
-                doubleclick_tag: tag
-            });
-        } else {
-            html = img_creative_iframe({
-                click_url: clickURL.url,
-                img_url: creative.url,
-                width: creative.w,
-                height: creative.h
-            });
-        }
-        response.send(html);
-        logger.httpResponse(response);
+        renderCreativeTag(creative, secure, function(err, html){
+            response.send(html);
+            logger.httpResponse(response);
+        });
     });
 });
+
+
+/* --------------------------------------------------------- */
+/* ---------------------- CLICK Endpoints ------------------ */
+/* --------------------------------------------------------- */
 
 /**
  * Endpoint to handle clicks.  Redirects to whatever URL is specified in the 'redir' query param.
@@ -182,8 +198,8 @@ app.get(urls.CLICK_PATH, function(request, response){
     }
     //TODO: Remove port once in prod
     var secure = (request.protocol == 'https');
-    var port = secure ? https_port: http_port;
-    var clickURL = new urls.ClickURL(http_hostname, https_hostname, port);
+    var port = secure ? HTTPS_PORT: HTTP_PORT;
+    var clickURL = new urls.ClickURL(HTTP_HOSTNAME, HTTPS_HOSTNAME, port);
     clickURL.parse(request.query, secure);
     response.status(302).set('location', clickURL.redir);
     response.send();
@@ -191,13 +207,17 @@ app.get(urls.CLICK_PATH, function(request, response){
     logger.click(request, response, clickURL);
 });
 
+/* --------------------------------------------------------- */
+/* ---------------------- ACTION Endpoints ----------------- */
+/* --------------------------------------------------------- */
+
 /**
  * Endpoint to handle conversions (actions)
  */
 app.get(urls.ACTION_PATH, function(request, response){
     var secure = (request.protocol == 'https');
-    var port = secure ? https_port: http_port;
-    var actURL = new urls.ActionBeaconURL(http_hostname, https_hostname, port);
+    var port = secure ? HTTPS_PORT: HTTP_PORT;
+    var actURL = new urls.ActionBeaconURL(HTTP_HOSTNAME, HTTPS_HOSTNAME, port);
     actURL.parse(request.query, secure);
     response.status(200).send();
     logger.action(request, response, actURL);
