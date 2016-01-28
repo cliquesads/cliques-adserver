@@ -1,154 +1,43 @@
 //first-party packages
 var node_utils = require('cliques_node_utils');
-var cliques_cookies = node_utils.cookies;
-var logging = require('./lib/adserver_logging');
+var logger = require('./lib/logger');
 var urls = node_utils.urls;
 var db = node_utils.mongodb;
-var bigQueryUtils = node_utils.google.bigQueryUtils;
-var googleAuth = node_utils.google.auth;
+var connections = require('./lib/connections');
+var USER_CONNECTION = connections.USER_CONNECTION;
+var EXCHANGE_CONNECTION = connections.EXCHANGE_CONNECTION;
 
 //third-party packages
 //have to require PMX before express to enable monitoring
-var pmx = require('pmx').init();
-var express = require('express');
-var https = require('https');
-var http = require('http');
-var app = express();
-var fs = require('fs');
+var express = require('./lib/express');
 var jade = require('jade');
-var requestIp = require('request-ip');
-var winston = require('winston');
-var path = require('path');
-var util = require('util');
-var cookieParser = require('cookie-parser');
-var responseTime = require('response-time');
 var config = require('config');
-
-/* -------------------  LOGGING ------------------- */
-
-var logfile = path.join(
-    process.env['HOME'],
-    'data',
-    'logs',
-    util.format('adserver_%s.log',node_utils.dates.isoFormatUTCNow())
-);
-
-var chunkSize = config.get('AdServer.redis_event_cache.chunkSize');
-var devNullLogger = logger = new logging.AdServerCLogger({transports: []});
-if (process.env.NODE_ENV != 'test'){
-    //var bq_config = bigQueryUtils.loadFullBigQueryConfig('./bq_config.json');
-    // set up production logger
-    if (process.env.NODE_ENV === 'production'){
-        var bq_config = bigQueryUtils.loadFullBigQueryConfig('./bq_config.json');
-    } else {
-        // use dev config if not running in production
-        bq_config = bigQueryUtils.loadFullBigQueryConfig('./bq_config_dev.json','/google/bq_config_dev.json');
-    }
-    var eventStreamer = new bigQueryUtils.BigQueryEventStreamer(bq_config,
-        googleAuth.DEFAULT_JWT_SECRETS_FILE,chunkSize);
-    logger = new logging.AdServerCLogger({
-        transports: [
-            new (winston.transports.Console)({timestamp:true}),
-            new (winston.transports.File)({filename:logfile,timestamp:true}),
-            new (winston.transports.RedisEventCache)({ eventStreamer: eventStreamer})
-        ]
-    });
-} else {
-    // just for running unittests so whole HTTP log isn't written to console
-    logger = devNullLogger;
-}
-
-/* ------------------- MONGODB - EXCHANGE DB ------------------- */
-
-// Build the connection string
-var exchangeMongoURI = util.format('mongodb://%s:%s/%s',
-    config.get('AdServer.mongodb.exchange.secondary.host'),
-    config.get('AdServer.mongodb.exchange.secondary.port'),
-    config.get('AdServer.mongodb.exchange.db'));
-
-var exchangeMongoOptions = {
-    user: config.get('AdServer.mongodb.exchange.user'),
-    pass: config.get('AdServer.mongodb.exchange.pwd'),
-    auth: {authenticationDatabase: config.get('AdServer.mongodb.exchange.db')}
-};
-var EXCHANGE_CONNECTION = db.createConnectionWrapper(exchangeMongoURI, exchangeMongoOptions, function(err, logstring){
-    if (err) throw err;
-    logger.info(logstring);
-});
-var advertiser_models = new db.models.AdvertiserModels(EXCHANGE_CONNECTION);
-
-/* ------------------- MONGODB - USER DB ------------------- */
-
-// Build the connection string
-var userMongoURI = util.format('mongodb://%s:%s/%s',
-    config.get('AdServer.mongodb.user.primary.host'),
-    config.get('AdServer.mongodb.user.primary.port'),
-    config.get('AdServer.mongodb.user.db'));
-
-var userMongoOptions = {
-    user: config.get('AdServer.mongodb.user.user'),
-    pass: config.get('AdServer.mongodb.user.pwd'),
-    auth: {authenticationDatabase: config.get('AdServer.mongodb.user.db')}
-};
-var USER_CONNECTION = db.createConnectionWrapper(userMongoURI, userMongoOptions, function(err, logstring){
-    if (err) throw err;
-    logger.info(logstring);
-});
 
 /* ------------------- HOSTNAME VARIABLES ------------------- */
 
-// http_hostname var is external http_hostname, not localhost
-var http_hostname = config.get('AdServer.http.external.hostname');
-var https_hostname = config.get('AdServer.https.external.hostname');
-var http_port = config.get('AdServer.http.external.port');
-var https_port = config.get('AdServer.https.external.port');
-
-/* ------------------- EXPRESS MIDDLEWARE ------------------- */
-
-// inside request-ip middleware handler
-app.use(function(req, res, next) {
-    req.clientIp = requestIp.getClientIp(req); // on localhost > 127.0.0.1
-    next();
-});
-app.use(cookieParser());
-app.use(responseTime());
-app.set('http_port', (config.get('AdServer.http.port') || 5000));
-app.set('https_port', (config.get('AdServer.https.port') || 3000));
-app.use(express.static(__dirname + '/public'));
-
-// custom cookie-parsing middleware
-var days_expiration = config.get('Cookies.expirationdays');
-var domain = config.get('Cookies.domain');
-var cookie_handler = new cliques_cookies.CookieHandler(days_expiration,domain,USER_CONNECTION);
-app.use(function(req, res, next){
-    cookie_handler.get_or_set_uuid(req, res, next);
-});
-
-// custom HTTP request logging middleware
-app.use(function(req, res, next){
-    logger.httpRequestMiddleware(req, res, next);
-});
+// HTTP_HOSTNAME var is external HTTP_HOSTNAME, not localhost
+var HTTP_HOSTNAME = config.get('AdServer.http.external.hostname');
+var HTTPS_HOSTNAME = config.get('AdServer.https.external.hostname');
+var HTTP_PORT = config.get('AdServer.http.external.port');
+var HTTPS_PORT = config.get('AdServer.https.external.port');
 
 /*  ------------------- Jade Templates ------------------- */
 
 var img_creative_iframe  = jade.compileFile('./templates/img_creative_iframe.jade', null);
 var doubleclick_javascript  = jade.compileFile('./templates/doubleclick_javascript.jade', null);
 
-/*  ------------------- HTTP Endpoints  ------------------- */
+/*  ------------------ MongoDB Model Sets ------------------- */
 
-http.createServer(app).listen(app.get('http_port'));
-https.createServer({
-    key: fs.readFileSync('./config/cert/star_cliquesads_com.key'),
-    cert: fs.readFileSync('./config/cert/star_cliquesads_com.crt'),
-    ca: fs.readFileSync('./config/cert/DigiCertCA.crt')
-}, app).listen(app.get('https_port'));
+var advertiser_models = new db.models.AdvertiserModels(EXCHANGE_CONNECTION);
+var publisher_models = new db.models.PublisherModels(EXCHANGE_CONNECTION);
 
-app.get('/', function(request, response) {
-    response.status(200).send();
-});
 
-//Temporary function to handle switching between doubleclick & internal click URLs
-function getRedir(creative){
+/*  ------------------------- UTILS ----------------------------- */
+
+/**
+ * Temporary function to handle switching between doubleclick & internal click URLs
+ */
+var getRedir = function(creative){
     if (creative.type === 'doubleclick'){
         // This only works because DFA ads append click URL directly to the end
         // of the third-party provided click URL
