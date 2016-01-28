@@ -180,6 +180,47 @@ app.get(urls.CR_PATH, function(request, response){
     });
 });
 
+/**
+ * Serves ad from iFrame call given a PUBLISHER creativeID, i.e. for default creatives.
+ *
+ * This path handles requests for creative using creative ID, rather than creative Group.
+ *
+ * Expects following query args:
+ * - pid : creative group ID
+ * - pid : placement ID
+ * - impid : impression ID
+ */
+app.get(urls.PUBCR_PATH, function(request, response){
+    if (!request.query.hasOwnProperty('pid')){
+        response.status(404).send("ERROR 404: Placement not found - no ID Parameter provided");
+        logger.error('GET Request sent to /pubcr without a placement_id');
+        return;
+    }
+    var secure = (request.protocol == 'https');
+    var port = secure ? HTTPS_PORT: HTTP_PORT;
+    var crURL = new urls.PubCreativeURL(HTTP_HOSTNAME, HTTPS_HOSTNAME, port);
+    crURL.parse(request.query, secure);
+
+    // make the db call to get creative group details
+    publisher_models.getNestedObjectById( crURL.pid, 'Placement', function(err, placement){
+        if (err) {
+            logger.error('Error trying to query creativeGroup from DB: ' + err);
+            response.status(500).send('Something went wrong');
+            return;
+        }
+        var creative = placement.getRandomHostedCreative();
+        if (creative){
+            renderCreativeTag(creative, secure, function(err, html){
+                response.send(html);
+                logger.httpResponse(response);
+            });
+        } else {
+            response.status(404).send("ERROR: The requested placement (_id  " + placement._id + " has no hostedCreatives.");
+            logger.error("GET Request sent to /pubcr for placement " + placement._id + ", but placement has no hostedCreatives!");
+        }
+    });
+});
+
 
 /* --------------------------------------------------------- */
 /* ---------------------- CLICK Endpoints ------------------ */
