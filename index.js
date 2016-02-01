@@ -52,28 +52,30 @@ var getRedir = function(creative){
  *
  * @param creative - any object conforming to creativeSchema
  * @param secure - render as secure tag or non-secure
- * @param [impURL] - optional impURL instance, which will be used to grab pid & impid params for clickURL
+ * @param [clickParams] - optional object containing extra params to format clickURL with
  * @param callback
  */
-var renderCreativeTag = function(creative, secure, impURL, callback){
+var renderCreativeTag = function(creative, secure, clickParams, callback){
+    clickParams = clickParams || {};
     if (!callback){
-        callback = impURL;
+        callback = clickParams;
+        clickParams = {};
     }
     var port = secure ? HTTPS_PORT: HTTP_PORT;
     // Generate Cliques click URL
     var clickURL = new urls.ClickURL(HTTP_HOSTNAME, HTTPS_HOSTNAME, port);
-    var clickURLOpts = {
-        cid: creative.id,
-        advid: creative.parent_advertiser.id,
-        crgid: creative.parent_creativegroup.id,
-        campid: creative.parent_campaign.id,
-        redir: getRedir(creative)
-    };
-    if (impURL){
-        clickURLOpts.pid = impURL.pid;
-        clickURLOpts.impid = impURL.impid;
+
+    // Parse Click URL param values from creative & clickParams properties.
+    clickParams.cid = creative.id;
+    clickParams.redir = getRedir(creative);
+    // If creative is an Advertiser tree creative, populate all parent Advertiser entity id params
+    if (creative.parent_advertiser){
+        clickParams.advid = creative.parent_advertiser.id;
+        clickParams.crgid = creative.parent_creativegroup.id;
+        clickParams.campid = creative.parent_campaign.id;
     }
-    clickURL.format(clickURLOpts, secure);
+
+    clickURL.format(clickParams, secure);
 
     // Now generate tag HTML
     if (creative.type === 'doubleclick'){
@@ -138,7 +140,11 @@ app.get(urls.IMP_PATH, function(request, response){
             return;
         }
         var creative = obj.getWeightedRandomCreative();
-        renderCreativeTag(creative, secure, impURL, function(err, html){
+        var clickParams = {
+            pid: impURL.pid,
+            impid: impURL.impid
+        };
+        renderCreativeTag(creative, secure, clickParams, function(err, html){
             response.send(html);
             logger.httpResponse(response);
             logger.impression(request, response, impURL, obj, creative);
@@ -211,7 +217,8 @@ app.get(urls.PUBCR_PATH, function(request, response){
         }
         var creative = placement.getRandomHostedCreative();
         if (creative){
-            renderCreativeTag(creative, secure, function(err, html){
+            var clickParams = { pid: placement.id };
+            renderCreativeTag(creative, secure, clickParams, function(err, html){
                 response.send(html);
                 logger.httpResponse(response);
             });
