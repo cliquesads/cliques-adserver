@@ -45,7 +45,7 @@ var getRedir = function(creative){
     } else {
         return creative.click_url;
     }
-}
+};
 
 /**
  * Utility function to handle bulk of the legwork in rendering a creative tag with proper vars.
