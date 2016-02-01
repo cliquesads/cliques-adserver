@@ -59,6 +59,7 @@ var renderCreativeTag = function(creative, secure, impURL, callback){
     if (!callback){
         callback = impURL;
     }
+    var port = secure ? HTTPS_PORT: HTTP_PORT;
     // Generate Cliques click URL
     var clickURL = new urls.ClickURL(HTTP_HOSTNAME, HTTPS_HOSTNAME, port);
     var clickURLOpts = {
