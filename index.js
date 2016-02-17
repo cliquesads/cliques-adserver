@@ -1,5 +1,5 @@
 //first-party packages
-var node_utils = require('cliques_node_utils');
+var node_utils = require('@cliques/cliques-node-utils');
 var logger = require('./lib/logger');
 var urls = node_utils.urls;
 var db = node_utils.mongodb;
