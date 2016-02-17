@@ -43,14 +43,23 @@ done
 
 # Set proper environment variables now that env is set
 if [ "$env" == "production" ]; then
-    source ./activate_production.sh
     processname='adserver'
 else
-    source ./activate_dev.sh
     processname='adserver_dev'
 fi
 
-nvm use 0.12.0
+source activate_env.sh -e $env
+# if activate_env failed then bail
+if [ $? -ne 0 ]; then
+    exit $?
+fi
+
+# Need to be logged into to get @cliques packages
+npm whoami
+if [ $? -ne 0 ]; then
+    npm login
+fi
+# run npm install to install any new dependencies
 npm install
 
 if [ ! -d $HOME"/repositories/cliques-config" ]; then
@@ -66,7 +75,7 @@ running=$(pm2 list -m | grep "$processname")
 
 if [ -z "$running" ]; then
     # hook PM2 up to web monitoring with KeyMetrics
-    pm2 link d39yzaslt8iu57e w77ttxdzer9p8zv $HOSTNAME
+    pm2 link $KEYMETRICS_PRIVATE_KEY $KEYMETRICS_PUBLIC_KEY $HOSTNAME
     # start in cluster mode
     pm2 start index.js --name "$processname" -i 0
 else
