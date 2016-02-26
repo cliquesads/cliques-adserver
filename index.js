@@ -90,7 +90,7 @@ var renderCreativeTag = function(creative, secure, clickParams, callback){
     } else {
         html = img_creative_iframe({
             click_url: clickURL.url,
-            img_url: creative.url,
+            img_url: secure ? creative.secureUrl : creative.url,
             width: creative.w,
             height: creative.h
         });
