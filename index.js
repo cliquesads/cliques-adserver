@@ -140,6 +140,11 @@ app.get(urls.IMP_PATH, function(request, response){
             return;
         }
         var creative = obj.getWeightedRandomCreative();
+        // Stuff parent entities into creative to populate click URL macros
+        creative.parent_advertiser = obj.parent_advertiser;
+        creative.parent_creativegroup = obj;
+        creative.parent_campaign = obj.parent_campaign;
+
         var clickParams = {
             pid: impURL.pid,
             impid: impURL.impid
