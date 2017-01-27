@@ -8,7 +8,6 @@ var USER_CONNECTION = connections.USER_CONNECTION;
 var EXCHANGE_CONNECTION = connections.EXCHANGE_CONNECTION;
 
 var screenshotPublisherController = require('./lib/screenshotPublisherController');
-screenshotPublisherController.connectToRedis();
 
 //third-party packages
 //have to require PMX before express to enable monitoring
@@ -153,7 +152,7 @@ app.get(urls.IMP_PATH, function(request, response){
             impid: impURL.impid
         };
         renderCreativeTag(creative, secure, clickParams, function(err, html){
-            screenshotPublisherController.storeIdPair(impURL.pid, impURL.crgid, creative.click_url, 50, 5);
+            screenshotPublisherController.storeIdPair(impURL.pid, impURL.crgid, creative.click_url);
             response.send(html);
             logger.httpResponse(response);
             logger.impression(request, response, impURL, obj, creative);
