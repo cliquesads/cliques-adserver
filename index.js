@@ -1,3 +1,6 @@
+/* jshint node: true */
+'use strict';
+
 //first-party packages
 var node_utils = require('@cliques/cliques-node-utils'),
     ScreenshotPubSub = node_utils.google.pubsub.ScreenshotPubSub;
@@ -163,7 +166,13 @@ app.get(urls.IMP_PATH, function(request, response){
             impid: impURL.impid
         };
         renderCreativeTag(creative, secure, clickParams, function(err, html){
-            screenshotPublisherController.storeIdPair(impURL.pid, impURL.crgid, creative.click_url, service);
+            var websiteURL = '';
+            if (impURL.secure) {
+                websiteURL = impURL.secure_hostname;
+            } else {
+                websiteURL = impURL.hostname;
+            }
+            screenshotPublisherController.storeIdPair(impURL.pid, impURL.crgid, websiteURL, service);
             response.send(html);
             logger.httpResponse(response);
             logger.impression(request, response, impURL, obj, creative);
