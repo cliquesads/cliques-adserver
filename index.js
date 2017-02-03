@@ -1,11 +1,27 @@
+/* jshint node: true */
+'use strict';
+
 //first-party packages
-var node_utils = require('@cliques/cliques-node-utils');
+var node_utils = require('@cliques/cliques-node-utils'),
+    ScreenshotPubSub = node_utils.google.pubsub.ScreenshotPubSub;
 var logger = require('./lib/logger');
 var urls = node_utils.urls;
 var db = node_utils.mongodb;
 var connections = require('./lib/connections');
 var USER_CONNECTION = connections.USER_CONNECTION;
 var EXCHANGE_CONNECTION = connections.EXCHANGE_CONNECTION;
+
+/* ----------------- Screenshot PubSub controller and service instance ----------------- */
+var screenshotPublisherController = require('./lib/screenshotPublisherController');
+if (process.env.NODE_ENV !== 'production'){
+    var pubsub_options = {
+        projectId: 'mimetic-codex-781',
+        test: true
+    };
+} else {
+    pubsub_options = {projectId: 'mimetic-codex-781'};
+}
+var service = new ScreenshotPubSub(pubsub_options);
 
 //third-party packages
 //have to require PMX before express to enable monitoring
@@ -150,6 +166,13 @@ app.get(urls.IMP_PATH, function(request, response){
             impid: impURL.impid
         };
         renderCreativeTag(creative, secure, clickParams, function(err, html){
+            var websiteURL = '';
+            if (impURL.secure) {
+                websiteURL = impURL.secure_hostname;
+            } else {
+                websiteURL = impURL.hostname;
+            }
+            screenshotPublisherController.storeIdPair(impURL.pid, impURL.crgid, websiteURL, service);
             response.send(html);
             logger.httpResponse(response);
             logger.impression(request, response, impURL, obj, creative);
