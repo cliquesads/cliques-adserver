@@ -6,6 +6,7 @@ var node_utils = require('@cliques/cliques-node-utils'),
     ScreenshotPubSub = node_utils.google.pubsub.ScreenshotPubSub;
 var logger = require('./lib/logger');
 var urls = node_utils.urls;
+var tags = node_utils.tags;
 var db = node_utils.mongodb;
 var connections = require('./lib/connections');
 var USER_CONNECTION = connections.USER_CONNECTION;
@@ -299,3 +300,33 @@ app.get(urls.ACTION_PATH, function(request, response){
     response.status(200).send();
     logger.action(request, response, actURL);
 });
+
+/* --------------------------------------------------------- */
+/**
+ * CRG Test page, just a placeholder
+ */
+if (process.env.NODE_ENV !== 'production'){
+    app.get('/test_ad', function(request, response){
+        var secure = request.protocol === 'https';
+        var hostname = secure ? HTTPS_HOSTNAME : HTTP_HOSTNAME;
+        var external_port = secure ? HTTPS_PORT : HTTP_PORT;
+        var impTag = new tags.ImpTag(hostname, {
+            port: external_port,
+            secure: secure
+        });
+
+        var PLACEMENT_ID = "54f8df2e6bcc85d9653becfb";
+        advertiser_models.getNestedObjectById(request.query.crgid, 'CreativeGroup', function(err, obj){
+            if (err) {
+                logger.error('Error trying to query creativeGroup from DB: ' + err);
+                response.status(500).send('Something went wrong');
+                return;
+            }
+            var rendered = impTag.render(obj);
+            rendered = urls.expandURLMacros(rendered, { pid: PLACEMENT_ID});
+            var fn = jade.compileFile('./templates/test_ad.jade', null);
+            var html = fn({ imptag: rendered, pid: PLACEMENT_ID});
+            response.send(html);
+        });
+    });
+}
