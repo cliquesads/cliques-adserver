@@ -167,14 +167,12 @@ app.get(urls.IMP_PATH, function(request, response){
             impid: impURL.impid
         };
         renderCreativeTag(creative, secure, clickParams, function(err, html){
-            var websiteURL = '';
-            if (impURL.secure) {
-                websiteURL = impURL.secure_hostname;
-            } else {
-                websiteURL = impURL.hostname;
-            }
-            screenshotPublisherController.storeIdPair(impURL.pid, impURL.crgid, websiteURL, service);
             response.send(html);
+            // handle logging & screenshot stuff after returning markup
+            var referrerUrl = request.get('Referrer');
+            if (referrerUrl){
+                screenshotPublisherController.storeIdPair(impURL.pid, impURL.crgid, referrerUrl, service);
+            }
             logger.httpResponse(response);
             logger.impression(request, response, impURL, obj, creative);
         });
