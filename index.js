@@ -169,7 +169,7 @@ app.get(urls.IMP_PATH, function(request, response){
         renderCreativeTag(creative, secure, clickParams, function(err, html){
             response.send(html);
             // handle logging & screenshot stuff after returning markup
-            var referrerUrl = request.get('Referrer');
+            var referrerUrl = impURL.ref;
             if (referrerUrl){
                 screenshotPublisherController.storeIdPair(impURL.pid, impURL.crgid, referrerUrl, service);
             }
