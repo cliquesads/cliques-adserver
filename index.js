@@ -55,7 +55,7 @@ var publisher_models = new db.models.PublisherModels(EXCHANGE_CONNECTION);
  * Temporary function to handle switching between doubleclick & internal click URLs
  */
 var getRedir = function(creative){
-    if (creative.type === 'doubleclick'){
+    if (creative.hostingType === 'doubleclick'){
         // This only works because DFA ads append click URL directly to the end
         // of the third-party provided click URL
         return '';
@@ -95,7 +95,7 @@ var renderCreativeTag = function(creative, secure, clickParams, callback){
     clickURL.format(clickParams, secure);
 
     // Now generate tag HTML
-    if (creative.type === 'doubleclick'){
+    if (creative.hostingType === 'doubleclick'){
         // TODO: Make this more robust, this is terrible
         var tag = urls.expandURLMacros(creative.tag, {
             cachebuster: Date.now().toString(),
