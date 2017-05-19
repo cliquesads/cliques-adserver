@@ -72,7 +72,7 @@ var getRedir = function(creative){
  * @param [clickParams] - optional object containing extra params to format clickURL with
  * @param callback
  */
-var renderCreativeTag = function(creative, secure, clickParams, callback){
+var renderCreativePayload = function(creative, secure, clickParams, callback){
     clickParams = clickParams || {};
     if (!callback){
         callback = clickParams;
@@ -94,25 +94,34 @@ var renderCreativeTag = function(creative, secure, clickParams, callback){
 
     clickURL.format(clickParams, secure);
 
-    // Now generate tag HTML
-    if (creative.hostingType === 'doubleclick'){
-        // TODO: Make this more robust, this is terrible
-        var tag = urls.expandURLMacros(creative.tag, {
-            cachebuster: Date.now().toString(),
-            click_url: clickURL.url
-        });
-        var html = doubleclick_javascript({
-            doubleclick_tag: tag
-        });
+    // Now generate tag HTML or JSON
+    var payload;
+    // generate JSON of native assets & template to return to tag if native
+    if (creative.type === 'native'){
+        // just send whole native schema for now
+        payload = creative.native;
     } else {
-        html = img_creative_iframe({
-            click_url: clickURL.url,
-            img_url: secure ? creative.secureUrl : creative.url,
-            width: creative.w,
-            height: creative.h
-        });
+        // Otherwise, generate iFrame of display tag
+        if (creative.hostingType === 'doubleclick'){
+            // TODO: Make this more robust, this is terrible
+            var tag = urls.expandURLMacros(creative.tag, {
+                cachebuster: Date.now().toString(),
+                click_url: clickURL.url
+            });
+            payload = doubleclick_javascript({
+                doubleclick_tag: tag
+            });
+        } else {
+            payload = img_creative_iframe({
+                click_url: clickURL.url,
+                img_url: secure ? creative.secureUrl : creative.url,
+                width: creative.w,
+                height: creative.h
+            });
+        }
+
     }
-    return callback(null, html);
+    return callback(null, payload);
 };
 
 /*  ------------------- HTTP Endpoints  ------------------- */
@@ -166,7 +175,7 @@ app.get(urls.IMP_PATH, function(request, response){
             pid: impURL.pid,
             impid: impURL.impid
         };
-        renderCreativeTag(creative, secure, clickParams, function(err, html){
+        renderCreativePayload(creative, secure, clickParams, function(err, html){
             response.send(html);
             // handle logging & screenshot stuff after returning markup
             var referrerUrl = impURL.ref;
