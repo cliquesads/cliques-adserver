@@ -98,10 +98,7 @@ var renderCreativePayload = function(creative, secure, clickParams, callback){
     // generate JSON of native assets & template to return to tag if native
     if (creative.type === 'native'){
         // just send whole native schema for now
-        payload = creative.native;
-        payload.click_url = creative.click_url;
-        payload.advertiserName = creative.parent_advertiser.name;
-        payload.impTracker = creative.impTracker;
+        payload = creative.getNativeAssets();
     } else {
         // Otherwise, generate iFrame of display tag
         if (creative.hostingType === 'doubleclick'){
