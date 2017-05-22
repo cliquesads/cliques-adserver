@@ -100,6 +100,9 @@ var renderCreativePayload = function(creative, secure, clickParams, callback){
     if (creative.type === 'native'){
         // just send whole native schema for now
         payload = creative.native;
+        payload.click_url = creative.click_url;
+        payload.advertiserName = creative.parent_advertiser.name;
+        payload.impTracker = creative.impTracker;
     } else {
         // Otherwise, generate iFrame of display tag
         if (creative.hostingType === 'doubleclick'){
