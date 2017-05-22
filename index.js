@@ -91,7 +91,6 @@ var renderCreativePayload = function(creative, secure, clickParams, callback){
         clickParams.crgid = creative.parent_creativegroup.id;
         clickParams.campid = creative.parent_campaign.id;
     }
-
     clickURL.format(clickParams, secure);
 
     // Now generate tag HTML or JSON
@@ -122,7 +121,6 @@ var renderCreativePayload = function(creative, secure, clickParams, callback){
                 height: creative.h
             });
         }
-
     }
     return callback(null, payload);
 };
