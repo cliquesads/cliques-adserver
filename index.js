@@ -239,7 +239,7 @@ app.get(urls.PUBCR_PATH, function(request, response){
         var creative = placement.getRandomHostedCreative();
         if (creative){
             var clickParams = { pid: placement.id };
-            renderCreativeTag(creative, secure, clickParams, function(err, html){
+            renderCreativePayload(creative, secure, clickParams, function(err, html){
                 response.send(html);
                 logger.httpResponse(response);
             });
