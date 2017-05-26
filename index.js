@@ -52,19 +52,6 @@ var publisher_models = new db.models.PublisherModels(EXCHANGE_CONNECTION);
 /*  ------------------------- UTILS ----------------------------- */
 
 /**
- * Temporary function to handle switching between doubleclick & internal click URLs
- */
-var getRedir = function(creative){
-    if (creative.hostingType === 'doubleclick'){
-        // This only works because DFA ads append click URL directly to the end
-        // of the third-party provided click URL
-        return '';
-    } else {
-        return creative.click_url;
-    }
-};
-
-/**
  * Utility function to handle bulk of the legwork in rendering a creative tag with proper vars.
  *
  * @param creative - any object conforming to creativeSchema
