@@ -84,7 +84,7 @@ var renderCreativePayload = function(creative, secure, clickParams, callback){
 
     // Parse Click URL param values from creative & clickParams properties.
     clickParams.cid = creative.id;
-    clickParams.redir = getRedir(creative);
+    clickParams.redir = creative.getRedir();
     // If creative is an Advertiser tree creative, populate all parent Advertiser entity id params
     if (creative.parent_advertiser){
         clickParams.advid = creative.parent_advertiser.id;
@@ -98,7 +98,7 @@ var renderCreativePayload = function(creative, secure, clickParams, callback){
     // generate JSON of native assets & template to return to tag if native
     if (creative.type === 'native'){
         // just send whole native schema for now
-        payload = creative.getNativeAssets();
+        payload = creative.getNativeAssets(clickURL);
     } else {
         // Otherwise, generate iFrame of display tag
         if (creative.hostingType === 'doubleclick'){
