@@ -201,7 +201,7 @@ app.get(urls.CR_PATH, function(request, response){
             response.status(500).send('Something went wrong');
             return;
         }
-        renderCreativeTag(creative, secure, function(err, html){
+        renderCreativePayload(creative, secure, function(err, html){
             response.send(html);
             logger.httpResponse(response);
         });
