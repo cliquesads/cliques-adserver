@@ -285,7 +285,7 @@ app.get(urls.CLICK_PATH, function(request, response){
                 return;
             }
             if (creative.clickTracker){
-                request.get(creative.clickTracker)
+                request(creative.clickTracker)
                     .on('response', function(response) {
                         console.log(response.statusCode);
                         console.log(response.headers['content-type']);
