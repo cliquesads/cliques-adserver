@@ -1,0 +1,9 @@
+doctype html
+html(lang="en")
+    head
+        title="Cliques Test Ad"
+    body
+        h1 Cliques Adserver Test (Dev or Local Test only)
+        p Call this page using query parameter <code style="color: red">?crgid=${CRG_ID}</code> to pass in the creative group you'd like to test. The tag for that creative group will then render below.
+        p You can also use the query parameter <code style="color: red">?pid=${PID}</code> to pass in a custom placement ID. By default this page loads with the placement ID <code style="color: red"> !{ pid }.</code>
+        #ad.col !{ imptag }
