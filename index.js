@@ -6,6 +6,7 @@ var node_utils = require('@cliques/cliques-node-utils'),
     ScreenshotPubSub = node_utils.google.pubsub.ScreenshotPubSub;
 var logger = require('./lib/logger');
 var urls = node_utils.urls;
+var request = require('request');
 var tags = node_utils.tags;
 var db = node_utils.mongodb;
 var connections = require('./lib/connections');
@@ -77,6 +78,9 @@ var renderCreativePayload = function(creative, secure, clickParams, callback){
         clickParams.advid = creative.parent_advertiser.id;
         clickParams.crgid = creative.parent_creativegroup.id;
         clickParams.campid = creative.parent_campaign.id;
+    }
+    if (creative.clickTracker){
+        clickParams.tracker = true;
     }
     clickURL.format(clickParams, secure);
 
@@ -273,6 +277,22 @@ app.get(urls.CLICK_PATH, function(request, response){
     clickURL.parse(request.query, secure);
     response.status(302).set('location', clickURL.redir);
     response.send();
+    // send click tracker request asynchronously
+    if (clickURL.tracker){
+        advertiser_models.getNestedObjectById(clickURL.cid, 'Creative', function(err, creative){
+            if (err){
+                logger.error('Error trying to query creative from DB to get clickTracker: ' + err);
+                return;
+            }
+            if (creative.clickTracker){
+                request.get(creative.clickTracker)
+                    .on('response', function(response) {
+                        console.log(response.statusCode);
+                        console.log(response.headers['content-type']);
+                    });
+            }
+        });
+    }
     logger.httpResponse(response);
     logger.click(request, response, clickURL);
 });
