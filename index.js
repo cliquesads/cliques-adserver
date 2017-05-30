@@ -263,18 +263,18 @@ app.get(urls.PUBCR_PATH, function(request, response){
  * Endpoint to handle clicks.  Redirects to whatever URL is specified in the 'redir' query param.
  *
  */
-app.get(urls.CLICK_PATH, function(request, response){
+app.get(urls.CLICK_PATH, function(req, response){
     // first check if incoming request has necessary query params
-    if (!request.query.hasOwnProperty('redir')){
+    if (!req.query.hasOwnProperty('redir')){
         response.status(404).send("ERROR 404: No redirect url specified");
         logger.error('GET Request sent to click path with no placement_id');
         return;
     }
     //TODO: Remove port once in prod
-    var secure = (request.protocol == 'https');
+    var secure = (req.protocol == 'https');
     var port = secure ? HTTPS_PORT: HTTP_PORT;
     var clickURL = new urls.ClickURL(HTTP_HOSTNAME, HTTPS_HOSTNAME, port);
-    clickURL.parse(request.query, secure);
+    clickURL.parse(req.query, secure);
     response.status(302).set('location', clickURL.redir);
     response.send();
     // send click tracker request asynchronously
@@ -285,16 +285,16 @@ app.get(urls.CLICK_PATH, function(request, response){
                 return;
             }
             if (creative.clickTracker){
-                request(creative.clickTracker, function(err, response, body){
-                    if (err) return console.error(err);
-                    console.log(response.statusCode);
-                    console.log(response.headers['content-type']);
-                });
+                request.get(creative.clickTracker)
+                    .on('response', function(response) {
+                        console.log(response.statusCode);
+                        console.log(response.headers['content-type']);
+                    });
             }
         });
     }
     logger.httpResponse(response);
-    logger.click(request, response, clickURL);
+    logger.click(req, response, clickURL);
 });
 
 /* --------------------------------------------------------- */
