@@ -287,8 +287,7 @@ app.get(urls.CLICK_PATH, function(req, response){
             if (creative.clickTracker){
                 request.get(creative.clickTracker)
                     .on('response', function(response) {
-                        console.log(response.statusCode);
-                        console.log(response.headers['content-type']);
+                        logger.info("3rd-party click tracker request sent to " + creative.clickTracker + ". RESPONSE_CODE: " + response.statusCode);
                     });
             }
         });
