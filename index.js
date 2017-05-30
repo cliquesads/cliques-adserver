@@ -6,6 +6,7 @@ var node_utils = require('@cliques/cliques-node-utils'),
     ScreenshotPubSub = node_utils.google.pubsub.ScreenshotPubSub;
 var logger = require('./lib/logger');
 var urls = node_utils.urls;
+var request = require('request');
 var tags = node_utils.tags;
 var db = node_utils.mongodb;
 var connections = require('./lib/connections');
@@ -52,19 +53,6 @@ var publisher_models = new db.models.PublisherModels(EXCHANGE_CONNECTION);
 /*  ------------------------- UTILS ----------------------------- */
 
 /**
- * Temporary function to handle switching between doubleclick & internal click URLs
- */
-var getRedir = function(creative){
-    if (creative.type === 'doubleclick'){
-        // This only works because DFA ads append click URL directly to the end
-        // of the third-party provided click URL
-        return '';
-    } else {
-        return creative.click_url;
-    }
-};
-
-/**
  * Utility function to handle bulk of the legwork in rendering a creative tag with proper vars.
  *
  * @param creative - any object conforming to creativeSchema
@@ -72,7 +60,7 @@ var getRedir = function(creative){
  * @param [clickParams] - optional object containing extra params to format clickURL with
  * @param callback
  */
-var renderCreativeTag = function(creative, secure, clickParams, callback){
+var renderCreativePayload = function(creative, secure, clickParams, callback){
     clickParams = clickParams || {};
     if (!callback){
         callback = clickParams;
@@ -84,35 +72,45 @@ var renderCreativeTag = function(creative, secure, clickParams, callback){
 
     // Parse Click URL param values from creative & clickParams properties.
     clickParams.cid = creative.id;
-    clickParams.redir = getRedir(creative);
+    clickParams.redir = creative.getRedir();
     // If creative is an Advertiser tree creative, populate all parent Advertiser entity id params
     if (creative.parent_advertiser){
         clickParams.advid = creative.parent_advertiser.id;
         clickParams.crgid = creative.parent_creativegroup.id;
         clickParams.campid = creative.parent_campaign.id;
     }
-
+    if (creative.clickTracker){
+        clickParams.tracker = true;
+    }
     clickURL.format(clickParams, secure);
 
-    // Now generate tag HTML
-    if (creative.type === 'doubleclick'){
-        // TODO: Make this more robust, this is terrible
-        var tag = urls.expandURLMacros(creative.tag, {
-            cachebuster: Date.now().toString(),
-            click_url: clickURL.url
-        });
-        var html = doubleclick_javascript({
-            doubleclick_tag: tag
-        });
+    // Now generate tag HTML or JSON
+    var payload;
+    // generate JSON of native assets & template to return to tag if native
+    if (creative.type === 'native'){
+        // just send whole native schema for now
+        payload = creative.getNativeAssets(clickURL);
     } else {
-        html = img_creative_iframe({
-            click_url: clickURL.url,
-            img_url: secure ? creative.secureUrl : creative.url,
-            width: creative.w,
-            height: creative.h
-        });
+        // Otherwise, generate iFrame of display tag
+        if (creative.hostingType === 'doubleclick'){
+            // TODO: Make this more robust, this is terrible
+            var tag = urls.expandURLMacros(creative.tag, {
+                cachebuster: Date.now().toString(),
+                click_url: clickURL.url
+            });
+            payload = doubleclick_javascript({
+                doubleclick_tag: tag
+            });
+        } else {
+            payload = img_creative_iframe({
+                click_url: clickURL.url,
+                img_url: secure ? creative.secureUrl : creative.url,
+                width: creative.w,
+                height: creative.h
+            });
+        }
     }
-    return callback(null, html);
+    return callback(null, payload);
 };
 
 /*  ------------------- HTTP Endpoints  ------------------- */
@@ -166,7 +164,7 @@ app.get(urls.IMP_PATH, function(request, response){
             pid: impURL.pid,
             impid: impURL.impid
         };
-        renderCreativeTag(creative, secure, clickParams, function(err, html){
+        renderCreativePayload(creative, secure, clickParams, function(err, html){
             response.send(html);
             // handle logging & screenshot stuff after returning markup
             var referrerUrl = impURL.ref;
@@ -207,7 +205,7 @@ app.get(urls.CR_PATH, function(request, response){
             response.status(500).send('Something went wrong');
             return;
         }
-        renderCreativeTag(creative, secure, function(err, html){
+        renderCreativePayload(creative, secure, function(err, html){
             response.send(html);
             logger.httpResponse(response);
         });
@@ -245,7 +243,7 @@ app.get(urls.PUBCR_PATH, function(request, response){
         var creative = placement.getRandomHostedCreative();
         if (creative){
             var clickParams = { pid: placement.id };
-            renderCreativeTag(creative, secure, clickParams, function(err, html){
+            renderCreativePayload(creative, secure, clickParams, function(err, html){
                 response.send(html);
                 logger.httpResponse(response);
             });
@@ -265,22 +263,37 @@ app.get(urls.PUBCR_PATH, function(request, response){
  * Endpoint to handle clicks.  Redirects to whatever URL is specified in the 'redir' query param.
  *
  */
-app.get(urls.CLICK_PATH, function(request, response){
+app.get(urls.CLICK_PATH, function(req, response){
     // first check if incoming request has necessary query params
-    if (!request.query.hasOwnProperty('redir')){
+    if (!req.query.hasOwnProperty('redir')){
         response.status(404).send("ERROR 404: No redirect url specified");
         logger.error('GET Request sent to click path with no placement_id');
         return;
     }
     //TODO: Remove port once in prod
-    var secure = (request.protocol == 'https');
+    var secure = (req.protocol == 'https');
     var port = secure ? HTTPS_PORT: HTTP_PORT;
     var clickURL = new urls.ClickURL(HTTP_HOSTNAME, HTTPS_HOSTNAME, port);
-    clickURL.parse(request.query, secure);
+    clickURL.parse(req.query, secure);
     response.status(302).set('location', clickURL.redir);
     response.send();
+    // send click tracker request asynchronously
+    if (clickURL.tracker){
+        advertiser_models.getNestedObjectById(clickURL.cid, 'Creative', function(err, creative){
+            if (err){
+                logger.error('Error trying to query creative from DB to get clickTracker: ' + err);
+                return;
+            }
+            if (creative.clickTracker){
+                request.get(creative.clickTracker)
+                    .on('response', function(response) {
+                        logger.info("3rd-party click tracker request sent to " + creative.clickTracker + ". RESPONSE_CODE: " + response.statusCode);
+                    });
+            }
+        });
+    }
     logger.httpResponse(response);
-    logger.click(request, response, clickURL);
+    logger.click(req, response, clickURL);
 });
 
 /* --------------------------------------------------------- */
