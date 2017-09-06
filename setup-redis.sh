@@ -31,6 +31,6 @@ fi
 cd $REDISPATH'/src'
 
 # Now start redis-server
-redis-server $HOME/repositories/cliques-config/redis/redis.conf
+./redis-server $HOME/repositories/cliques-config/redis/redis.conf
 
 exit 0
