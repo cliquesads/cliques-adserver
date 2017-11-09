@@ -155,9 +155,10 @@ app.get(urls.IMP_PATH, function(request, response){
             response.status(500).send('Something went wrong');
             return;
         }
-        // var creative = obj.getWeightedRandomCreative();
         creativeLookup.getCreative(impURL.aid, obj, function(err, creative){
             // Stuff parent entities into creative to populate click URL macros
+            if (err) return logger.error(err);
+
             creative.parent_advertiser = obj.parent_advertiser;
             creative.parent_creativegroup = obj;
             creative.parent_campaign = obj.parent_campaign;
