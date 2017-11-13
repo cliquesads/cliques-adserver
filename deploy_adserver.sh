@@ -83,3 +83,8 @@ else
     node clear_redis_event_cache.js
     pm2 start "$processname"
 fi
+
+# setup logrotate
+pm2 set pm2-logrotate:max_size $LOGROTATE_MAX_SIZE
+pm2 set pm2-logrotate:compress $LOGROTATE_COMPRESS
+pm2 set pm2-logrotate:rotateInterval $LOGROTATE_ROTATE_INTERVAL
