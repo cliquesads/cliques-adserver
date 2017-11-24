@@ -50,7 +50,7 @@ npm install pm2@$PM2_VERSION -g
 pm2 updatePM2
 
 # logrotate plugin for PM2
-npm install pm2-logrotate -g
+pm2 install pm2-logrotate
 npm install mocha@$MOCHA_VERSION -g
 
 exit 0
