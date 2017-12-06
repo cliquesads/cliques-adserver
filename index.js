@@ -29,7 +29,7 @@ var service = new ScreenshotPubSub(pubsub_options);
 //third-party packages
 //have to require PMX before express to enable monitoring
 var express = require('./lib/express');
-var jade = require('jade');
+var pug = require('pug');
 var config = require('config');
 
 /* ------------------- HOSTNAME VARIABLES ------------------- */
@@ -42,8 +42,8 @@ var HTTPS_PORT = config.get('AdServer.https.external.port');
 
 /*  ------------------- Jade Templates ------------------- */
 
-var img_creative_iframe  = jade.compileFile('./templates/img_creative_iframe.jade', null);
-var doubleclick_javascript  = jade.compileFile('./templates/doubleclick_javascript.jade', null);
+var img_creative_iframe  = pug.compileFile('./templates/img_creative_iframe.pug', null);
+var doubleclick_javascript  = pug.compileFile('./templates/doubleclick_javascript.pug', null);
 
 /*  ------------------ MongoDB Model Sets ------------------- */
 
@@ -339,7 +339,7 @@ if (process.env.NODE_ENV !== 'production'){
             }
             var rendered = impTag.render(obj);
             rendered = urls.expandURLMacros(rendered, { pid: PLACEMENT_ID});
-            var fn = jade.compileFile('./templates/test_ad.jade', null);
+            var fn = pug.compileFile('./templates/test_ad.pug', null);
             var html = fn({ imptag: rendered, pid: PLACEMENT_ID});
             response.send(html);
         });
