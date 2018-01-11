@@ -2,7 +2,7 @@
   "event_tables":{
     "IMPRESSION": {
       "tableId": "impressions",
-      "datasetId": "ad_events_dev",
+      "datasetId": "smartertravel_ad_events_dev",
       "schema": {
         "fields": [
           {"name": "hostname", "type": "STRING"},
@@ -21,7 +21,7 @@
     },
     "CLICK": {
       "tableId": "clicks",
-      "datasetId": "ad_events_dev",
+      "datasetId": "smartertravel_ad_events_dev",
       "schema": {
         "fields": [
           {"name": "hostname", "type": "STRING"},
@@ -42,7 +42,7 @@
     },
     "ACTION": {
       "tableId": "actions",
-      "datasetId": "ad_events_dev",
+      "datasetId": "smartertravel_ad_events_dev",
       "schema": {
         "fields": [
           {"name": "hostname", "type": "STRING"},

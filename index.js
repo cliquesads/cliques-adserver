@@ -10,6 +10,7 @@ var request = require('request');
 var tags = node_utils.tags;
 var db = node_utils.mongodb;
 var connections = require('./lib/connections');
+var creativeLookup = require('./lib/creativeLookerUpper');
 var USER_CONNECTION = connections.USER_CONNECTION;
 var EXCHANGE_CONNECTION = connections.EXCHANGE_CONNECTION;
 
@@ -28,7 +29,7 @@ var service = new ScreenshotPubSub(pubsub_options);
 //third-party packages
 //have to require PMX before express to enable monitoring
 var express = require('./lib/express');
-var jade = require('jade');
+var pug = require('pug');
 var config = require('config');
 
 /* ------------------- HOSTNAME VARIABLES ------------------- */
@@ -41,8 +42,8 @@ var HTTPS_PORT = config.get('AdServer.https.external.port');
 
 /*  ------------------- Jade Templates ------------------- */
 
-var img_creative_iframe  = jade.compileFile('./templates/img_creative_iframe.jade', null);
-var doubleclick_javascript  = jade.compileFile('./templates/doubleclick_javascript.jade', null);
+var img_creative_iframe  = pug.compileFile('./templates/img_creative_iframe.pug', null);
+var doubleclick_javascript  = pug.compileFile('./templates/doubleclick_javascript.pug', null);
 
 /*  ------------------ MongoDB Model Sets ------------------- */
 
@@ -154,25 +155,28 @@ app.get(urls.IMP_PATH, function(request, response){
             response.status(500).send('Something went wrong');
             return;
         }
-        var creative = obj.getWeightedRandomCreative();
-        // Stuff parent entities into creative to populate click URL macros
-        creative.parent_advertiser = obj.parent_advertiser;
-        creative.parent_creativegroup = obj;
-        creative.parent_campaign = obj.parent_campaign;
+        creativeLookup.getCreative(impURL.aid, obj, function(err, creative){
+            // Stuff parent entities into creative to populate click URL macros
+            if (err) return logger.error(err);
 
-        var clickParams = {
-            pid: impURL.pid,
-            impid: impURL.impid
-        };
-        renderCreativePayload(creative, secure, clickParams, function(err, html){
-            response.send(html);
-            // handle logging & screenshot stuff after returning markup
-            var referrerUrl = impURL.ref;
-            if (referrerUrl){
-                screenshotPublisherController.storeIdPair(impURL.pid, impURL.crgid, referrerUrl, service);
-            }
-            logger.httpResponse(response);
-            logger.impression(request, response, impURL, obj, creative);
+            creative.parent_advertiser = obj.parent_advertiser;
+            creative.parent_creativegroup = obj;
+            creative.parent_campaign = obj.parent_campaign;
+
+            var clickParams = {
+                pid: impURL.pid,
+                impid: impURL.impid
+            };
+            renderCreativePayload(creative, secure, clickParams, function(err, html){
+                response.send(html);
+                // handle logging & screenshot stuff after returning markup
+                var referrerUrl = impURL.ref;
+                if (referrerUrl){
+                    screenshotPublisherController.storeIdPair(impURL.pid, impURL.crgid, referrerUrl, service);
+                }
+                logger.httpResponse(response);
+                logger.impression(request, response, impURL, obj, creative);
+            });
         });
     });
 });
@@ -335,7 +339,7 @@ if (process.env.NODE_ENV !== 'production'){
             }
             var rendered = impTag.render(obj);
             rendered = urls.expandURLMacros(rendered, { pid: PLACEMENT_ID});
-            var fn = jade.compileFile('./templates/test_ad.jade', null);
+            var fn = pug.compileFile('./templates/test_ad.pug', null);
             var html = fn({ imptag: rendered, pid: PLACEMENT_ID});
             response.send(html);
         });
