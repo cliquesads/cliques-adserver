@@ -1,6 +1,6 @@
 {
   "name": "cliques-adserver",
-  "version": "0.9.3",
+  "version": "0.9.31",
   "description": "Cliques ad server",
   "main": "index.js",
   "scripts": {
