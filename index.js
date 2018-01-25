@@ -13,6 +13,9 @@ var connections = require('./lib/connections');
 var creativeLookup = require('./lib/creativeLookerUpper');
 var USER_CONNECTION = connections.USER_CONNECTION;
 var EXCHANGE_CONNECTION = connections.EXCHANGE_CONNECTION;
+var PRIMARY_EXCHANGE_CONNECTION = connections.PRIMARY_EXCHANGE_CONNECTION;
+
+var cliquesModels = new db.models.CliquesModels(PRIMARY_EXCHANGE_CONNECTION);
 
 /* ----------------- Screenshot PubSub controller and service instance ----------------- */
 var screenshotPublisherController = require('./lib/screenshotPublisherController');
@@ -165,10 +168,13 @@ app.get(urls.IMP_PATH, function(request, response){
 
             var clickParams = {
                 pid: impURL.pid,
-                impid: impURL.impid
+                impid: impURL.impid,
+                bidid: impURL.bidid
             };
+
             renderCreativePayload(creative, secure, clickParams, function(err, html){
                 response.send(html);
+
                 // handle logging & screenshot stuff after returning markup
                 var referrerUrl = impURL.ref;
                 if (referrerUrl){
@@ -297,7 +303,7 @@ app.get(urls.CLICK_PATH, function(req, response){
         });
     }
     logger.httpResponse(response);
-    logger.click(req, response, clickURL);
+    logger.click(req, response, clickURL, cliquesModels);
 });
 
 /* --------------------------------------------------------- */
