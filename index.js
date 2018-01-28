@@ -13,6 +13,18 @@ var connections = require('./lib/connections');
 var creativeLookup = require('./lib/creativeLookerUpper');
 var USER_CONNECTION = connections.USER_CONNECTION;
 var EXCHANGE_CONNECTION = connections.EXCHANGE_CONNECTION;
+var PRIMARY_EXCHANGE_CONNECTION = connections.PRIMARY_EXCHANGE_CONNECTION;
+
+var cliquesModels = new db.models.CliquesModels(PRIMARY_EXCHANGE_CONNECTION);
+
+// get object w/ all bidder URL's once on load.
+// TODO: Add pm2 signal for this.
+var bidders;
+cliquesModels.getAllBidders(function(err, res){
+    if (err) return logger.error('ERROR retrieving bidders from Mongo: ' + err);
+    bidders = res;
+    logger.info('Got new bidder config: ' + JSON.stringify(bidders));
+});
 
 /* ----------------- Screenshot PubSub controller and service instance ----------------- */
 var screenshotPublisherController = require('./lib/screenshotPublisherController');
@@ -143,7 +155,7 @@ app.get(urls.IMP_PATH, function(request, response){
         logger.error('GET Request sent to /crg without a creative_group_id');
         return;
     }
-    var secure = (request.protocol == 'https');
+    var secure = (request.protocol === 'https');
     var port = secure ? HTTPS_PORT: HTTP_PORT;
     var impURL = new urls.ImpURL(HTTP_HOSTNAME, HTTPS_HOSTNAME, port);
     impURL.parse(request.query, secure);
@@ -165,10 +177,13 @@ app.get(urls.IMP_PATH, function(request, response){
 
             var clickParams = {
                 pid: impURL.pid,
-                impid: impURL.impid
+                impid: impURL.impid,
+                bidid: impURL.bidid
             };
+
             renderCreativePayload(creative, secure, clickParams, function(err, html){
                 response.send(html);
+
                 // handle logging & screenshot stuff after returning markup
                 var referrerUrl = impURL.ref;
                 if (referrerUrl){
@@ -197,7 +212,7 @@ app.get(urls.CR_PATH, function(request, response){
         logger.error('GET Request sent to /cr without a creative_id');
         return;
     }
-    var secure = (request.protocol == 'https');
+    var secure = (request.protocol === 'https');
     var port = secure ? HTTPS_PORT: HTTP_PORT;
     var crURL = new urls.CreativeURL(HTTP_HOSTNAME, HTTPS_HOSTNAME, port);
     crURL.parse(request.query, secure);
@@ -232,7 +247,7 @@ app.get(urls.PUBCR_PATH, function(request, response){
         logger.error('GET Request sent to /pubcr without a placement_id');
         return;
     }
-    var secure = (request.protocol == 'https');
+    var secure = (request.protocol === 'https');
     var port = secure ? HTTPS_PORT: HTTP_PORT;
     var crURL = new urls.PubCreativeURL(HTTP_HOSTNAME, HTTPS_HOSTNAME, port);
     crURL.parse(request.query, secure);
@@ -275,12 +290,13 @@ app.get(urls.CLICK_PATH, function(req, response){
         return;
     }
     //TODO: Remove port once in prod
-    var secure = (req.protocol == 'https');
+    var secure = (req.protocol === 'https');
     var port = secure ? HTTPS_PORT: HTTP_PORT;
     var clickURL = new urls.ClickURL(HTTP_HOSTNAME, HTTPS_HOSTNAME, port);
     clickURL.parse(req.query, secure);
     response.status(302).set('location', clickURL.redir);
     response.send();
+
     // send click tracker request asynchronously
     if (clickURL.tracker){
         advertiser_models.getNestedObjectById(clickURL.cid, 'Creative', function(err, creative){
@@ -297,7 +313,22 @@ app.get(urls.CLICK_PATH, function(req, response){
         });
     }
     logger.httpResponse(response);
-    logger.click(req, response, clickURL);
+
+    // now find which bidder to send click event to, which will be the bidder corresponding to the
+    // campaign's Clique.
+    // TODO: Don't like having to make a DB call for each click. Can probably either add clique_id
+    // TODO: or cache campaign data in Redis in the future to make this faster.
+    advertiser_models.getNestedObjectById(clickURL.campid, 'Campaign', function(err, campaign) {
+        if (err){
+            logger.error('Error trying to query campaign from DB to get campaign clique: ' + err);
+            return;
+        }
+        var eligible_bidders = bidders.filter(function(clique){
+            return clique._id = campaign.clique;
+        });
+        var bidder = eligible_bidders.length ? eligible_bidders[0].bidder : false;
+        logger.click(req, response, clickURL, bidder);
+    });
 });
 
 /* --------------------------------------------------------- */
@@ -308,7 +339,7 @@ app.get(urls.CLICK_PATH, function(req, response){
  * Endpoint to handle conversions (actions)
  */
 app.get(urls.ACTION_PATH, function(request, response){
-    var secure = (request.protocol == 'https');
+    var secure = (request.protocol === 'https');
     var port = secure ? HTTPS_PORT: HTTP_PORT;
     var actURL = new urls.ActionBeaconURL(HTTP_HOSTNAME, HTTPS_HOSTNAME, port);
     actURL.parse(request.query, secure);
