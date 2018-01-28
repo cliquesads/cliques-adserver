@@ -323,7 +323,11 @@ app.get(urls.CLICK_PATH, function(req, response){
             logger.error('Error trying to query campaign from DB to get campaign clique: ' + err);
             return;
         }
-        logger.click(req, response, clickURL, bidders[campaign.clique]);
+        var eligible_bidders = bidders.filter(function(clique){
+            return clique._id = campaign.clique;
+        });
+        var bidder = eligible_bidders.length ? eligible_bidders[0].bidder : false;
+        logger.click(req, response, clickURL, bidder);
     });
 });
 
