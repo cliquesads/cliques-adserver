@@ -23,6 +23,7 @@ var bidders;
 cliquesModels.getAllBidders(function(err, res){
     if (err) return logger.error('ERROR retrieving bidders from Mongo: ' + err);
     bidders = res;
+    logger.info('Got new bidder config: ' + JSON.stringify(bidders));
 });
 
 /* ----------------- Screenshot PubSub controller and service instance ----------------- */
