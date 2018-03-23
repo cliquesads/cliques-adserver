@@ -53,6 +53,23 @@
           {"name": "value","type": "STRING"}
         ]
       }
+    },
+    "S2S": {
+      "tableId": "s2s",
+      "schema": {
+        "fields": [
+          {"name": "hostname", "type": "STRING"},
+          {"name": "level","type": "STRING"},
+          {"name": "msg","type": "STRING"},
+          {"name": "tstamp","type": "TIMESTAMP"},
+          {"name": "eventType","type": "STRING"},
+          {"name": "method","type": "STRING"},
+          {"name": "url","type": "STRING"},
+          {"name": "responseStatusCode","type": "INTEGER"},
+          {"name": "responseMsg","type": "STRING"},
+          {"name": "retries", "type": "INTEGER"}
+        ]
+      }
     }
   }
 }
