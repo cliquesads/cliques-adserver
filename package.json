@@ -1,13 +1,13 @@
 {
   "name": "cliques-adserver",
-  "version": "0.9.52",
+  "version": "0.9.53",
   "description": "Cliques ad server",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "@cliques/cliques-node-utils": "^0.9.55",
+    "@cliques/cliques-node-utils": "^0.9.58",
     "async": "^0.9.0",
     "backoff": "^2.5.0",
     "body-parser": "^1.12.0",
