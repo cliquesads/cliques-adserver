@@ -9,8 +9,8 @@ const async = require('async');
 const googleAuth = node_utils.google.auth;
 
 googleAuth.getJWTAuthClient(googleAuth.DEFAULT_JWT_SECRETS_FILE, [bigQueryUtils.BIGQUERY_SCOPE], function(err, auth){
-    const adEventDataset = config.get("Exchange.logger.bigQuery.adEventDataset");
-    const httpEventDataset = config.get("Exchange.logger.bigQuery.httpEventDataset");
+    const adEventDataset = config.get("AdServer.logger.bigQuery.adEventDataset");
+    const httpEventDataset = config.get("AdServer.logger.bigQuery.httpEventDataset");
     const tableConfig = bigQueryUtils.loadFullBigQueryConfig('./bq_config.json', httpEventDataset, adEventDataset);
     const functions = [];
     for (let table of Object.entries(tableConfig.event_tables)){
