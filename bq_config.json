@@ -16,6 +16,10 @@
           {"name": "advertiser","type": "STRING"},
           {"name": "adv_clique","type": "STRING"}
         ]
+      },
+      "timePartitioning": {
+        "type": "DAY",
+        "field": "tstamp"
       }
     },
     "CLICK": {
@@ -36,6 +40,10 @@
           {"name": "redir","type": "STRING"},
           {"name": "impid","type": "STRING"}
         ]
+      },
+      "timePartitioning": {
+        "type": "DAY",
+        "field": "tstamp"
       }
     },
     "ACTION": {
@@ -52,6 +60,10 @@
           {"name": "advertiser","type": "STRING"},
           {"name": "value","type": "STRING"}
         ]
+      },
+      "timePartitioning": {
+        "type": "DAY",
+        "field": "tstamp"
       }
     },
     "S2S": {
@@ -69,6 +81,10 @@
           {"name": "responseMsg","type": "STRING"},
           {"name": "retries", "type": "INTEGER"}
         ]
+      },
+      "timePartitioning": {
+        "type": "DAY",
+        "field": "tstamp"
       }
     }
   }
